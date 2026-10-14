@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex, nofollow">
+  <title>快速掃描</title>
+  <link rel="icon" href="../assets/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../assets/style.css">
+  <link rel="stylesheet" href="quick-scan.css">
+  <link rel="modulepreload" href="../assets/qr-reader.js">
+  <link rel="modulepreload" href="../assets/scan-list.js">
+  <link rel="modulepreload" href="../assets/submission.js">
+  <link rel="modulepreload" href="../assets/config.js">
+  <script type="module" src="app.js"></script>
+</head>
+<body class="quick-scan">
+  <div class="camera" id="camera" data-flash="">
+    <video id="video" playsinline muted></video>
+    <button type="button" class="btn primary start" id="start">開始掃描</button>
+    <p class="toast" id="toast" aria-live="polite"></p>
+  </div>
+
+  <div class="bar">
+    <p><strong id="count-new">0</strong> 新 · <span id="count-all">0</span> 筆</p>
+    <div class="bar-actions">
+      <button type="button" class="btn" id="stop" hidden>停止</button>
+      <button type="button" class="btn primary" id="copy">複製新的</button>
+      <button type="button" class="btn" id="clear">清空</button>
+    </div>
+  </div>
+  <p class="field-error" id="error" hidden></p>
+
+  <ul class="scan-list" id="list"></ul>
+</body>
+</html>

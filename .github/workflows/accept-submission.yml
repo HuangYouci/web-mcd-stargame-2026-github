@@ -1,0 +1,113 @@
+name: 投稿審核
+
+# 開 Issue／修改時只檢查格式並留言；repo 擁有者加上「收錄」標籤後才寫入資料。
+
+on:
+  issues:
+    types: [opened, edited, reopened, labeled]
+
+permissions:
+  contents: write
+  issues: write
+  actions: write
+
+jobs:
+  check:
+    if: >-
+      github.event.action != 'labeled' &&
+      contains(github.event.issue.labels.*.name, '投稿') &&
+      github.event.issue.state == 'open'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: 檢查格式
+        id: check
+        env:
+          MODE: check
+        run: node scripts/accept-submission.mjs
+
+      - name: 回覆
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE: ${{ github.event.issue.number }}
+          RESULT: ${{ steps.check.outputs.result }}
+        run: |
+          gh issue comment "$ISSUE" --body-file comment.md
+          gh issue edit "$ISSUE" --remove-label "格式錯誤" --remove-label "待審核" --remove-label "需確認" || true
+          case "$RESULT" in
+            ready) gh issue edit "$ISSUE" --add-label "待審核" ;;
+            invalid) gh issue edit "$ISSUE" --add-label "格式錯誤" ;;
+            conflict) gh issue edit "$ISSUE" --add-label "需確認" ;;
+            duplicate) gh issue close "$ISSUE" --reason "not planned" ;;
+          esac
+
+  apply:
+    if: >-
+      github.event.action == 'labeled' &&
+      github.event.label.name == '收錄' &&
+      github.event.sender.login == github.repository_owner &&
+      github.event.issue.state == 'open'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      # 同時收錄多則時 push 可能撞到，失敗就以最新 main 重跑一次合併
+      - name: 寫入資料
+        id: apply
+        env:
+          MODE: apply
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for attempt in 1 2 3 4 5; do
+            git fetch origin main
+            git reset --hard origin/main
+            : > "$RUNNER_TEMP/output"
+            GITHUB_OUTPUT="$RUNNER_TEMP/output" node scripts/accept-submission.mjs
+            result=$(sed -n 's/^result=//p' "$RUNNER_TEMP/output")
+            if [ "$result" != "added" ]; then
+              break
+            fi
+            git add data/codes.json
+            git commit -m "chore: 收錄投稿 #${{ github.event.issue.number }}"
+            if git push origin HEAD:main; then
+              break
+            fi
+            if [ "$attempt" = 5 ]; then
+              echo "accept-submission | push 連續失敗" >&2
+              exit 1
+            fi
+            sleep $((attempt * 3))
+          done
+          echo "result=$result" >> "$GITHUB_OUTPUT"
+
+      - name: 重新部署網站
+        if: steps.apply.outputs.result == 'added'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run pages.yml --ref main
+
+      - name: 回覆
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE: ${{ github.event.issue.number }}
+          RESULT: ${{ steps.apply.outputs.result }}
+        run: |
+          gh issue comment "$ISSUE" --body-file comment.md
+          gh issue edit "$ISSUE" --remove-label "待審核" || true
+          case "$RESULT" in
+            added|duplicate) gh issue close "$ISSUE" --reason completed ;;
+            invalid) gh issue edit "$ISSUE" --remove-label "收錄" --add-label "格式錯誤" ;;
+            conflict) gh issue edit "$ISSUE" --remove-label "收錄" --add-label "需確認" ;;
+          esac

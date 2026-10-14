@@ -1,0 +1,5 @@
+[
+  { "title": "查交通", "description": "台鐵、高鐵、捷運、公車時刻與即時動態", "url": "https://transport.huangyouci.com/", "image": "assets/promo/transport.png" },
+  { "title": "大學申", "description": "大學科系資訊、歷年錄取分數與落點分析", "url": "https://bigstudent.org/", "image": "assets/promo/bigstudent.png" },
+  { "title": "inif", "description": "AI 模擬面試與履歷檢核", "url": "https://inif.app/", "image": "assets/promo/inif.png" }
+]

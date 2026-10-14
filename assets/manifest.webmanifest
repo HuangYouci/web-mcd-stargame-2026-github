@@ -1,0 +1,13 @@
+{
+  "name": "星級遊戲 QR 收集冊",
+  "short_name": "星級 QR",
+  "start_url": "../",
+  "scope": "../",
+  "display": "standalone",
+  "background_color": "#fbf7f0",
+  "theme_color": "#d62e22",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

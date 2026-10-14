@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>星級遊戲 QR 收集冊</title>
+  <meta name="description" content="麥當勞 1+1 星級遊戲 2026 的 QR Code 眾籌清單與全台點位（非官方）">
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0d1117" media="(prefers-color-scheme: dark)">
+  <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+  <link rel="manifest" href="assets/manifest.webmanifest">
+  <link rel="stylesheet" href="assets/style.css">
+  <link rel="preload" href="data/codes.json" as="fetch" crossorigin>
+  <link rel="preload" href="data/summary.json" as="fetch" crossorigin>
+  <link rel="modulepreload" href="assets/config.js">
+  <link rel="modulepreload" href="assets/filters.js">
+  <link rel="modulepreload" href="assets/places.js">
+  <link rel="modulepreload" href="assets/store.js">
+  <link rel="modulepreload" href="assets/submission.js">
+  <link rel="modulepreload" href="assets/views.js">
+  <link rel="modulepreload" href="assets/qr.js">
+  <script type="module" src="assets/app.js"></script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="brand" href="./">
+        <img src="assets/icon.svg" alt="" width="32" height="32">
+        <h1>星級遊戲 QR 收集冊</h1>
+      </a>
+      <dl class="stats">
+        <div>
+          <dt>你已兌換</dt>
+          <dd id="stat-redeemed">0</dd>
+        </div>
+        <div>
+          <dt>網站收錄</dt>
+          <dd><span id="stat-codes">–</span><span class="total"> / <span id="stat-points">–</span></span></dd>
+        </div>
+      </dl>
+    </div>
+    <nav class="tabs" aria-label="分頁">
+      <div class="tabs-inner" role="tablist">
+        <button type="button" role="tab" id="tab-codes" aria-controls="panel-codes" data-tab="codes">QR Code</button>
+        <button type="button" role="tab" id="tab-scan" aria-controls="panel-scan" data-tab="scan">掃描</button>
+        <button type="button" role="tab" id="tab-places" aria-controls="panel-places" data-tab="places">點位</button>
+      </div>
+    </nav>
+  </header>
+
+  <div class="layout">
+    <main>
+      <section id="panel-codes" role="tabpanel" aria-labelledby="tab-codes">
+        <div class="toolbar">
+          <input type="search" id="code-query" placeholder="搜尋代號" aria-label="搜尋代號" inputmode="numeric">
+          <div class="button-group" role="radiogroup" aria-label="兌換狀態">
+            <button type="button" role="radio" data-status="all" aria-checked="true">全部</button>
+            <button type="button" role="radio" data-status="todo" aria-checked="false">未兌換</button>
+            <button type="button" role="radio" data-status="done" aria-checked="false">已兌換</button>
+          </div>
+        </div>
+        <div class="code-grid" id="code-grid"></div>
+      </section>
+
+      <section id="panel-scan" role="tabpanel" aria-labelledby="tab-scan" hidden>
+        <div class="scan-actions">
+          <button type="button" class="btn primary" id="scan-camera" hidden>開相機掃描</button>
+          <label class="btn file-button" id="scan-photo">
+            從照片讀取
+            <input type="file" id="scan-photo-input" accept="image/*">
+          </label>
+        </div>
+        <input type="url" id="scan-url" placeholder="貼上網址 https://liff.line.me/…" aria-label="QR Code 網址" autocomplete="off">
+        <p class="field-error" id="scan-error" hidden></p>
+        <div id="scan-result" aria-live="polite"></div>
+      </section>
+
+      <section id="panel-places" role="tabpanel" aria-labelledby="tab-places" hidden>
+        <div class="toolbar">
+          <input type="search" id="place-query" placeholder="搜尋名稱或地址" aria-label="搜尋點位">
+          <select id="place-cat" aria-label="類型"><option value="">全部類型</option></select>
+          <select id="place-city" aria-label="縣市"><option value="">全部縣市</option></select>
+        </div>
+        <p class="result-count" id="place-count"></p>
+        <div class="table-box">
+          <table class="place-table">
+            <thead>
+              <tr>
+                <th class="name" scope="col">地點</th>
+                <th scope="col">地址</th>
+              </tr>
+            </thead>
+            <tbody id="place-rows"></tbody>
+          </table>
+        </div>
+        <button type="button" class="btn more" id="place-more" hidden>顯示更多</button>
+      </section>
+    </main>
+
+    <aside class="promo" id="promo" aria-labelledby="promo-title" hidden>
+      <h2 id="promo-title">其他作品</h2>
+      <div class="promo-list" id="promo-list"></div>
+    </aside>
+  </div>
+
+  <footer class="site-footer">
+    <p>非官方整理</p>
+    <nav aria-label="頁尾">
+      <a href="https://github.com/HuangYouci/web-mcd-stargame-2026-github" target="_blank" rel="noopener">GitHub repo</a>
+      <button type="button" class="link" id="backup-open">資料匯入匯出</button>
+    </nav>
+  </footer>
+
+  <dialog id="qr-dialog" class="dialog" aria-labelledby="qr-dialog-title">
+    <form method="dialog" class="dialog-head">
+      <h2 id="qr-dialog-title"></h2>
+      <button type="submit" class="btn">關閉</button>
+    </form>
+    <div id="qr-dialog-body" class="qr-box"></div>
+    <a id="qr-dialog-link" class="btn block" target="_blank" rel="noopener">開啟網址</a>
+  </dialog>
+
+  <dialog id="backup-dialog" class="dialog" aria-labelledby="backup-title">
+    <form method="dialog" class="dialog-head">
+      <h2 id="backup-title">資料匯入匯出</h2>
+      <button type="submit" class="btn">關閉</button>
+    </form>
+    <div class="field">
+      <label for="backup-export">匯出</label>
+      <span class="input-row">
+        <input type="text" id="backup-export" readonly class="mono">
+        <button type="button" class="btn" id="backup-copy">複製</button>
+      </span>
+    </div>
+    <form class="field" id="backup-import-form">
+      <label for="backup-import">匯入</label>
+      <span class="input-row">
+        <input type="text" id="backup-import" placeholder="07029 07680" autocomplete="off" class="mono">
+        <button type="submit" class="btn">匯入</button>
+      </span>
+    </form>
+    <p class="backup-result" id="backup-result" aria-live="polite"></p>
+  </dialog>
+
+  <dialog id="camera-dialog" class="dialog camera-dialog" aria-label="相機掃描">
+    <video id="camera-video" playsinline muted></video>
+    <form method="dialog"><button type="submit" class="btn block">關閉</button></form>
+  </dialog>
+</body>
+</html>

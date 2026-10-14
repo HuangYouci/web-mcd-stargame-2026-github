@@ -1,0 +1,9 @@
+{
+  "name": "web-mcd-stargame-2026-github",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test \"tests/*.test.mjs\"",
+    "import-places": "node scripts/import-places.mjs"
+  }
+}

@@ -1,0 +1,19 @@
+name: 投稿 QR Code
+description: 新增一個星級遊戲 QR Code
+title: "投稿："
+labels: ["投稿"]
+body:
+  - type: input
+    id: url
+    attributes:
+      label: 網址
+      placeholder: https://liff.line.me/2010522144-5nZYW3pn?q=
+    validations:
+      required: true
+  - type: input
+    id: code
+    attributes:
+      label: 代號
+      placeholder: "07029"
+    validations:
+      required: true
