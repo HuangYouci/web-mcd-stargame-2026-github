@@ -147,3 +147,9 @@ test('匯出匯入代號與 q', () => {
   assert.equal(next['12345'], undefined, '六位數不拆');
   assert.equal(importRedeemed({}, '').added, 0);
 });
+
+test('displayLabel：沒代號用 q 末五碼', async () => {
+  const { displayLabel } = await import('../assets/store.js');
+  assert.equal(displayLabel({ id: 'ff2948060d7a', code: '' }), '60d7a');
+  assert.equal(displayLabel({ id: 'ff2948060d7a', code: '07029' }), '07029');
+});

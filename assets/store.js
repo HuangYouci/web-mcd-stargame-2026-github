@@ -7,6 +7,14 @@
 const KEY_IN_TEXT = /(?<![0-9a-f])(?:\d{5}|[0-9a-f]{12})(?![0-9a-f])/g;
 const KEY_PATTERN = /^(?:\d{5}|[0-9a-f]{12})$/;
 
+/**
+ * 畫面上辨識一筆 QR Code 的短標籤：有代號用代號，沒有用 q 末五碼。
+ * 末五碼只做顯示，紀錄 key 仍用完整 q，避免剛好是五位數字時和代號撞在一起。
+ */
+export function displayLabel(entry) {
+  return entry.code || entry.id.slice(-5);
+}
+
 /** 一筆 QR Code 的兌換紀錄 key。 */
 export function redeemKey(entry) {
   return entry.code || entry.id;

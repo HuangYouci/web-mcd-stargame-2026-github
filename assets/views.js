@@ -2,6 +2,7 @@
  * 純展示元件：只依參數建立 DOM，資料與動作一律由呼叫端注入。
  */
 import { encodeQr, qrToPath } from './qr.js';
+import { displayLabel } from './store.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const pathCache = new Map();
@@ -56,7 +57,7 @@ export function CodeCard({ entry, redeemed, onToggleRedeemed, onShowQr, onQrSlot
   const slot = el('button', {
     type: 'button',
     class: 'qr-slot',
-    'aria-label': `放大 ${entry.code || entry.id} 的 QR Code`,
+    'aria-label': `放大 ${displayLabel(entry)} 的 QR Code`,
     'data-text': entry.url,
     onClick: onShowQr,
   });
@@ -64,9 +65,10 @@ export function CodeCard({ entry, redeemed, onToggleRedeemed, onShowQr, onQrSlot
 
   return el('article', { class: redeemed ? 'code-card is-redeemed' : 'code-card', 'data-id': entry.id }, [
     slot,
-    entry.code
-      ? el('strong', { class: 'code', text: entry.code })
-      : el('div', { class: 'code-pending' }, [el('strong', { text: '待補代號' }), el('span', { class: 'mono muted', text: entry.id })]),
+    el('div', { class: 'code-title' }, [
+      el('strong', { class: entry.code ? 'code' : 'code pending', text: displayLabel(entry) }),
+      entry.code ? null : el('span', { class: 'muted', text: '待補代號' }),
+    ]),
     el('div', { class: 'code-actions' }, [
       el('label', { class: 'check-label' }, [
         el('input', { type: 'checkbox', checked: redeemed, onChange: onToggleRedeemed }),
@@ -104,8 +106,8 @@ export function PlaceRow({ place, mapsUrl }) {
 export function ScanResult({ id, known, redeemedAt, onToggleRedeemed, form }) {
   const head = known
     ? el('div', { class: 'scan-head' }, [
-        known.code ? el('strong', { class: 'scan-code', text: known.code }) : el('strong', { text: '待補代號' }),
-        el('span', { class: 'muted', text: '已收錄' }),
+        el('strong', { class: 'scan-code', text: displayLabel(known) }),
+        el('span', { class: 'muted', text: known.code ? '已收錄' : '已收錄 · 待補代號' }),
       ])
     : el('div', { class: 'scan-head' }, [el('strong', { text: '未收錄' }), el('span', { class: 'muted mono', text: `q=${id}` })]);
 

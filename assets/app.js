@@ -5,7 +5,7 @@ import { SITE_CONFIG } from './config.js';
 import { filterCodes, filterPlaces, mapsSearchUrl } from './filters.js';
 import { decodePlaces } from './places.js';
 import { getQrReader } from './qr-reader.js';
-import { exportRedeemed, importRedeemed, loadRedeemed, migrateRedeemed, redeemKey, saveRedeemed, toggleRedeemed } from './store.js';
+import { displayLabel, exportRedeemed, importRedeemed, loadRedeemed, migrateRedeemed, redeemKey, saveRedeemed, toggleRedeemed } from './store.js';
 import { CODE_PATTERN, buildIssueUrl, canonicalUrl, parseStarUrl } from './submission.js';
 import { CodeCard, EmptyRow, EmptyState, PlaceRow, PromoCard, QrImage, ScanResult, el } from './views.js';
 
@@ -100,8 +100,8 @@ function renderCodes() {
 }
 
 function openQrDialog(entry) {
-  $('qr-dialog-title').textContent = entry.code || '待補代號';
-  $('qr-dialog-body').replaceChildren(QrImage({ text: entry.url, label: `${entry.code || entry.id} 的 QR Code` }));
+  $('qr-dialog-title').textContent = displayLabel(entry);
+  $('qr-dialog-body').replaceChildren(QrImage({ text: entry.url, label: `${displayLabel(entry)} 的 QR Code` }));
   $('qr-dialog-link').href = entry.url;
   $('qr-dialog').showModal();
 }

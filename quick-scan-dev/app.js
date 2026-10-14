@@ -105,7 +105,7 @@ function handleText(text) {
   save();
   render();
   if (state.known.has(id)) {
-    flash('known', `已收錄 ${state.known.get(id) || '待補代號'}`);
+    flash('known', `已收錄 ${state.known.get(id) || `${id.slice(-5)} 待補代號`}`);
   } else {
     flash('new', `新 ${id}`);
     navigator.vibrate?.(60);
