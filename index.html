@@ -10,7 +10,7 @@
   <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
   <link rel="manifest" href="assets/manifest.webmanifest">
-  <link rel="stylesheet" href="assets/style.css?v=20261014-blur">
+  <link rel="stylesheet" href="assets/style.css?v=20261014-ended">
   <link rel="preload" href="data/codes.json" as="fetch" crossorigin>
   <link rel="preload" href="data/summary.json" as="fetch" crossorigin>
   <link rel="modulepreload" href="assets/config.js">
@@ -22,7 +22,7 @@
   <link rel="modulepreload" href="assets/qr.js">
   <script type="module" src="assets/app.js"></script>
 </head>
-<body>
+<body class="is-ended">
   <header class="site-header">
     <div class="header-inner">
       <a class="brand" href="./">
@@ -48,6 +48,16 @@
       </div>
     </nav>
   </header>
+
+  <main class="ended" id="ended">
+    <h2>活動已結束</h2>
+    <p>麥當勞官方已宣布 1+1 星級遊戲結束，謝謝大家參與。</p>
+    <p class="ended-stat" id="ended-stat" hidden></p>
+    <section class="ended-works" id="ended-works" aria-labelledby="ended-works-title" hidden>
+      <h3 id="ended-works-title">其他作品</h3>
+      <div class="promo-list" id="ended-promos"></div>
+    </section>
+  </main>
 
   <div class="layout">
     <main>

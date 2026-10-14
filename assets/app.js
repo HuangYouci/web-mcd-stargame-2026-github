@@ -382,7 +382,31 @@ function bindTabs() {
   showTab(location.hash.slice(1));
 }
 
+/** 活動結束頁：只顯示結束訊息、收錄總數與其他作品。由 body 的 is-ended class 開關。 */
+async function showEnded() {
+  try {
+    const codes = await fetchJson('data/codes.json');
+    $('ended-stat').textContent = `這段時間大家一起收錄了 ${codes.length} 個 QR Code。`;
+    $('ended-stat').hidden = false;
+  } catch (error) {
+    console.warn('app.showEnded | 讀取收錄數失敗', error);
+  }
+  try {
+    const promos = await fetchJson('data/promos.json');
+    if (Array.isArray(promos) && promos.length) {
+      $('ended-promos').replaceChildren(...promos.map(PromoCard));
+      $('ended-works').hidden = false;
+    }
+  } catch (error) {
+    console.warn('app.showEnded | 讀取其他作品失敗', error);
+  }
+}
+
 async function main() {
+  if (document.body.classList.contains('is-ended')) {
+    showEnded();
+    return;
+  }
   bindCodeControls();
   bindBackup();
   bindPlaceControls();
