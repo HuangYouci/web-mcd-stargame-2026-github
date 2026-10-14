@@ -79,7 +79,6 @@ function buildCard(entry) {
   return CodeCard({
     entry,
     redeemed: Boolean(state.redeemed[redeemKey(entry)]),
-    reportUrl: buildReportUrl(entry.url),
     onToggleRedeemed: () => {
       setRedeemed(toggleRedeemed(state.redeemed, redeemKey(entry)));
       // 只換掉這一張，不重繪整份清單
@@ -104,6 +103,7 @@ function openQrDialog(entry) {
   $('qr-dialog-title').textContent = displayLabel(entry);
   $('qr-dialog-body').replaceChildren(QrImage({ text: entry.url, label: `${displayLabel(entry)} 的 QR Code` }));
   $('qr-dialog-link').href = entry.url;
+  $('qr-dialog-report').href = buildReportUrl(entry.url);
   $('qr-dialog').showModal();
 }
 

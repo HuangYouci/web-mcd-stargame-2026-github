@@ -425,10 +425,6 @@ tr.empty td {
     gap: 2px 8px;
   }
 
-  .report-link {
-    align-self: flex-start;
-  }
-
   &.is-reported {
     border-style: dashed;
   }
@@ -717,6 +713,12 @@ tr.empty td {
   .field + .field {
     margin-top: 12px;
   }
+}
+
+.dialog-report {
+  display: block;
+  margin-top: 10px;
+  text-align: center;
 }
 
 .qr-box {

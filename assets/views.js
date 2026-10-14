@@ -48,13 +48,12 @@ export function QrImage({ text, label }) {
  * @param {{
  *   entry: { id: string, url: string, reports?: string[] },
  *   redeemed: boolean,
- *   reportUrl: string,
  *   onToggleRedeemed: () => void,
  *   onShowQr: () => void,
  *   onQrSlot: (slot: HTMLElement) => void,
  * }} props
  */
-export function CodeCard({ entry, redeemed, reportUrl, onToggleRedeemed, onShowQr, onQrSlot }) {
+export function CodeCard({ entry, redeemed, onToggleRedeemed, onShowQr, onQrSlot }) {
   const label = displayLabel(entry);
   const reports = entry.reports?.length ?? 0;
   const slot = el('button', {
@@ -80,7 +79,6 @@ export function CodeCard({ entry, redeemed, reportUrl, onToggleRedeemed, onShowQ
       ]),
       el('a', { class: 'btn', href: entry.url, target: '_blank', rel: 'noopener', text: '開啟網址' }),
     ]),
-    el('a', { class: 'report-link', href: reportUrl, target: '_blank', rel: 'noopener', text: '回報無法使用' }),
   ]);
 }
 
