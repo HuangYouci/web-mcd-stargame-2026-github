@@ -71,31 +71,28 @@ test('places.json 每個點位都有縣市', async () => {
   assert.equal(summary.pointCount, data.places.reduce((sum, p) => sum + p.points, 0));
 });
 
-test('filterCodes 依兌換紀錄 key 篩選並依代號排序', () => {
+test('filterCodes 以 q 查兌換紀錄；被回報的排最後，其餘新到舊', () => {
   const codes = [
-    { id: 'bbbbbbbbbbbb', code: '07680' },
-    { id: 'aaaaaaaaaaaa', code: '03766' },
-    { id: 'cccccccccccc', code: '' },
+    { id: 'aaaaaaaaaaaa', addedAt: '2026-10-13' },
+    { id: 'bbbbbbbbbbbb', addedAt: '2026-10-14' },
+    { id: 'cccccccccccc', addedAt: '2026-10-15', reports: ['x'] },
   ];
-  // 有代號以代號記、沒代號以 q 記
-  const redeemed = { '07680': '2026-10-14', cccccccccccc: '2026-10-14' };
+  const redeemed = { bbbbbbbbbbbb: 't' };
   const ids = (list) => list.map((c) => c.id[0]);
-  assert.deepEqual(ids(filterCodes(codes, { query: '', status: 'all' }, redeemed)), ['a', 'b', 'c']);
-  assert.deepEqual(ids(filterCodes(codes, { query: '', status: 'todo' }, redeemed)), ['a']);
-  assert.deepEqual(ids(filterCodes(codes, { query: '', status: 'done' }, redeemed)), ['b', 'c']);
-  assert.deepEqual(ids(filterCodes(codes, { query: '0376', status: 'all' }, redeemed)), ['a']);
+  assert.deepEqual(ids(filterCodes(codes, { query: '', status: 'all' }, redeemed)), ['b', 'a', 'c']);
+  assert.deepEqual(ids(filterCodes(codes, { query: '', status: 'todo' }, redeemed)), ['a', 'c']);
+  assert.deepEqual(ids(filterCodes(codes, { query: '', status: 'done' }, redeemed)), ['b']);
   assert.deepEqual(ids(filterCodes(codes, { query: 'cccc', status: 'all' }, redeemed)), ['c']);
 });
 
-test('redeemKey 與 migrateRedeemed：補上代號後紀錄搬到代號下', () => {
-  assert.equal(redeemKey({ id: 'aaaaaaaaaaaa', code: '' }), 'aaaaaaaaaaaa');
-  assert.equal(redeemKey({ id: 'aaaaaaaaaaaa', code: '07029' }), '07029');
-  const before = { aaaaaaaaaaaa: 't1', '07680': 't2' };
-  const after = migrateRedeemed(before, [{ id: 'aaaaaaaaaaaa', code: '07029' }, { id: 'bbbbbbbbbbbb', code: '07680' }]);
-  assert.deepEqual(after, { '07029': 't1', '07680': 't2' });
-  assert.equal(before.aaaaaaaaaaaa, 't1', '不修改原物件');
+test('migrateRedeemed：早期以代號記的紀錄轉成 q', () => {
+  const before = { '07029': 't1', bbbbbbbbbbbb: 't2' };
+  const codes = [{ id: 'aaaaaaaaaaaa', code: '07029' }, { id: 'bbbbbbbbbbbb', code: '07680' }];
+  assert.deepEqual(migrateRedeemed(before, codes), { aaaaaaaaaaaa: 't1', bbbbbbbbbbbb: 't2' });
+  assert.equal(before['07029'], 't1', '不修改原物件');
   const untouched = { x: 1 };
-  assert.equal(migrateRedeemed(untouched, [{ id: 'aaaaaaaaaaaa', code: '' }]), untouched);
+  assert.equal(migrateRedeemed(untouched, codes), untouched);
+  assert.equal(redeemKey({ id: 'aaaaaaaaaaaa', code: '07029' }), 'aaaaaaaaaaaa');
 });
 
 test('filterPlaces 類別 0 不被當成全部', () => {
@@ -133,23 +130,21 @@ test('decodePlaces 還原省略欄位', () => {
   ]);
 });
 
-test('匯出匯入代號與 q', () => {
+test('匯出 q、匯入 q 與舊版代號', () => {
   const now = new Date('2026-10-14T00:00:00Z');
-  const redeemed = { '07680': 'x', aaaaaaaaaaaa: 'q', '03766': 'y', junk: 'z' };
-  assert.equal(exportRedeemed(redeemed), '03766 07680 aaaaaaaaaaaa');
+  const codes = [{ id: 'cccccccccccc', code: '07029' }];
+  assert.equal(exportRedeemed({ bbbbbbbbbbbb: 'x', aaaaaaaaaaaa: 'y', '07029': 'old', junk: 'z' }), 'aaaaaaaaaaaa bbbbbbbbbbbb');
 
-  const { redeemed: next, added } = importRedeemed(redeemed, '07680, 07029\n123456 1234 a07899b BBBBBBBBBBBB', now);
+  const { redeemed, added } = importRedeemed({ aaaaaaaaaaaa: 'x' }, 'AAAAAAAAAAAA 07029 99999 dddddddddddd', codes, now);
   assert.equal(added, 2);
-  assert.equal(next['07680'], 'x', '已存在的保留原時間');
-  assert.equal(next['07029'], '2026-10-14T00:00:00.000Z');
-  assert.equal(next.bbbbbbbbbbbb, '2026-10-14T00:00:00.000Z', 'q 不分大小寫');
-  assert.equal(next['07899'], undefined, '夾在英數字中間的不算');
-  assert.equal(next['12345'], undefined, '六位數不拆');
+  assert.equal(redeemed.aaaaaaaaaaaa, 'x', '已存在的保留原時間');
+  assert.equal(redeemed.cccccccccccc, '2026-10-14T00:00:00.000Z', '舊代號換成 q');
+  assert.equal(redeemed.dddddddddddd, '2026-10-14T00:00:00.000Z');
+  assert.equal(redeemed['99999'], undefined, '清單裡找不到的代號略過');
   assert.equal(importRedeemed({}, '').added, 0);
 });
 
-test('displayLabel：沒代號用 q 末五碼', async () => {
+test('displayLabel 用 q 末五碼', async () => {
   const { displayLabel } = await import('../assets/store.js');
-  assert.equal(displayLabel({ id: 'ff2948060d7a', code: '' }), '60d7a');
-  assert.equal(displayLabel({ id: 'ff2948060d7a', code: '07029' }), '07029');
+  assert.equal(displayLabel({ id: 'ff2948060d7a', code: '07029' }), '60d7a');
 });

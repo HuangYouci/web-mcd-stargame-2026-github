@@ -1,6 +1,7 @@
-name: 投稿審核
+name: 投稿審核與回報
 
-# 開 Issue／修改時只檢查格式並留言；repo 擁有者加上「收錄」標籤後才寫入資料。
+# 投稿：開 Issue／修改時只檢查格式並留言；repo 擁有者加上「收錄」標籤後才寫入資料。
+# 回報：記錄回報者到該筆 QR Code，只加註記不刪資料，不需審核。
 
 on:
   issues:
@@ -38,11 +39,10 @@ jobs:
           RESULT: ${{ steps.check.outputs.result }}
         run: |
           gh issue comment "$ISSUE" --body-file comment.md
-          gh issue edit "$ISSUE" --remove-label "格式錯誤" --remove-label "待審核" --remove-label "需確認" || true
+          gh issue edit "$ISSUE" --remove-label "格式錯誤" --remove-label "待審核" || true
           case "$RESULT" in
             ready) gh issue edit "$ISSUE" --add-label "待審核" ;;
             invalid) gh issue edit "$ISSUE" --add-label "格式錯誤" ;;
-            conflict) gh issue edit "$ISSUE" --add-label "需確認" ;;
             duplicate) gh issue close "$ISSUE" --reason "not planned" ;;
           esac
 
@@ -77,7 +77,7 @@ jobs:
             : > "$RUNNER_TEMP/output"
             GITHUB_OUTPUT="$RUNNER_TEMP/output" node scripts/accept-submission.mjs
             result=$(sed -n 's/^result=//p' "$RUNNER_TEMP/output")
-            if [ "$result" != "added" ] && [ "$result" != "updated" ]; then
+            if [ "$result" != "added" ]; then
               break
             fi
             git add data/codes.json
@@ -94,7 +94,7 @@ jobs:
           echo "result=$result" >> "$GITHUB_OUTPUT"
 
       - name: 重新部署網站
-        if: steps.apply.outputs.result == 'added' || steps.apply.outputs.result == 'updated'
+        if: steps.apply.outputs.result == 'added'
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh workflow run pages.yml --ref main
@@ -108,7 +108,66 @@ jobs:
           gh issue comment "$ISSUE" --body-file comment.md
           gh issue edit "$ISSUE" --remove-label "待審核" || true
           case "$RESULT" in
-            added|updated|duplicate) gh issue close "$ISSUE" --reason completed ;;
+            added|duplicate) gh issue close "$ISSUE" --reason completed ;;
             invalid) gh issue edit "$ISSUE" --remove-label "收錄" --add-label "格式錯誤" ;;
-            conflict) gh issue edit "$ISSUE" --remove-label "收錄" --add-label "需確認" ;;
+          esac
+
+  report:
+    if: >-
+      github.event.action != 'labeled' &&
+      contains(github.event.issue.labels.*.name, '回報') &&
+      github.event.issue.state == 'open'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: 記錄回報
+        id: report
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for attempt in $(seq 1 10); do
+            git fetch origin main
+            git reset --hard origin/main
+            : > "$RUNNER_TEMP/output"
+            GITHUB_OUTPUT="$RUNNER_TEMP/output" node scripts/accept-report.mjs
+            result=$(sed -n 's/^result=//p' "$RUNNER_TEMP/output")
+            if [ "$result" != "reported" ]; then
+              break
+            fi
+            git add data/codes.json
+            git commit -m "chore: 記錄回報 #${{ github.event.issue.number }}"
+            if git push origin HEAD:main; then
+              break
+            fi
+            if [ "$attempt" = 10 ]; then
+              echo "accept-report | push 連續失敗" >&2
+              exit 1
+            fi
+            sleep $((attempt * 2 + RANDOM % 5))
+          done
+          echo "result=$result" >> "$GITHUB_OUTPUT"
+
+      - name: 重新部署網站
+        if: steps.report.outputs.result == 'reported'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run pages.yml --ref main
+
+      - name: 回覆
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE: ${{ github.event.issue.number }}
+          RESULT: ${{ steps.report.outputs.result }}
+        run: |
+          gh issue comment "$ISSUE" --body-file comment.md
+          case "$RESULT" in
+            invalid) gh issue edit "$ISSUE" --add-label "格式錯誤" ;;
+            *) gh issue close "$ISSUE" --reason completed ;;
           esac

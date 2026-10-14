@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { addScan, parseExportText, removeScan, setScanCode, toExportText } from '../assets/scan-list.js';
+import { addScan, parseExportText, removeScan, toExportText } from '../assets/scan-list.js';
 
 const URL_A = 'https://liff.line.me/2010522144-5nZYW3pn?q=aaaaaaaaaaaa';
 const URL_B = 'https://liff.line.me/2010522144-5nZYW3pn?q=bbbbbbbbbbbb';
@@ -14,40 +14,21 @@ test('addScan 去重且新的在前', () => {
   assert.equal(again.added, false);
   assert.equal(again.list, list);
   assert.deepEqual(list.map((s) => s.id), ['bbbbbbbbbbbb', 'aaaaaaaaaaaa']);
-
-  list = setScanCode(list, 'aaaaaaaaaaaa', '07029');
-  assert.equal(list[1].code, '07029');
   assert.deepEqual(removeScan(list, 'bbbbbbbbbbbb').map((s) => s.id), ['aaaaaaaaaaaa']);
 });
 
-test('匯出：未收錄的全部、已收錄缺代號且這次有填的；可再解析回來', () => {
-  const list = [
-    { id: 'aaaaaaaaaaaa', code: '07029' },
-    { id: 'bbbbbbbbbbbb', code: '' },
-    { id: 'cccccccccccc', code: '11111' },
-    { id: 'dddddddddddd', code: '22222' },
-    { id: 'eeeeeeeeeeee', code: '' },
-  ];
-  const known = new Map([
-    ['cccccccccccc', '11111'],
-    ['dddddddddddd', ''],
-    ['eeeeeeeeeeee', ''],
+test('匯出未收錄的網址，可再解析回來', () => {
+  const list = [{ id: 'aaaaaaaaaaaa' }, { id: 'bbbbbbbbbbbb' }, { id: 'cccccccccccc' }];
+  const text = toExportText(list, new Set(['cccccccccccc']));
+  assert.equal(text, `${URL_A}\n${URL_B}`);
+  assert.deepEqual(parseExportText(text).entries, [
+    { id: 'aaaaaaaaaaaa', url: URL_A },
+    { id: 'bbbbbbbbbbbb', url: URL_B },
   ]);
-  const URL_D = 'https://liff.line.me/2010522144-5nZYW3pn?q=dddddddddddd';
-  const text = toExportText(list, known);
-  assert.equal(text, `07029 ${URL_A}\n----- ${URL_B}\n22222 ${URL_D}`);
-
-  const { entries, skipped } = parseExportText(text);
-  assert.deepEqual(entries, [
-    { id: 'aaaaaaaaaaaa', url: URL_A, code: '07029' },
-    { id: 'bbbbbbbbbbbb', url: URL_B, code: '' },
-    { id: 'dddddddddddd', url: URL_D, code: '22222' },
-  ]);
-  assert.deepEqual(skipped, []);
 });
 
-test('parseExportText 容忍順序、空白與雜訊', () => {
-  const { entries, skipped } = parseExportText(`\n  ${URL_B}   12345 \n07680\t${URL_A}\nhello\n`);
-  assert.deepEqual(entries.map((e) => e.code), ['12345', '07680']);
+test('parseExportText 相容舊格式（代號 網址）並略過雜訊', () => {
+  const { entries, skipped } = parseExportText(`\n07029 ${URL_A}\n----- ${URL_B}\nhello\n`);
+  assert.deepEqual(entries.map((e) => e.id), ['aaaaaaaaaaaa', 'bbbbbbbbbbbb']);
   assert.deepEqual(skipped, ['hello']);
 });

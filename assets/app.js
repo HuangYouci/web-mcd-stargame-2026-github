@@ -6,7 +6,7 @@ import { filterCodes, filterPlaces, mapsSearchUrl } from './filters.js';
 import { decodePlaces } from './places.js';
 import { getQrReader } from './qr-reader.js';
 import { displayLabel, exportRedeemed, importRedeemed, loadRedeemed, migrateRedeemed, redeemKey, saveRedeemed, toggleRedeemed } from './store.js';
-import { CODE_PATTERN, buildIssueUrl, canonicalUrl, parseStarUrl } from './submission.js';
+import { buildIssueUrl, buildReportUrl, canonicalUrl, parseStarUrl } from './submission.js';
 import { CodeCard, EmptyRow, EmptyState, PlaceRow, PromoCard, QrImage, ScanResult, el } from './views.js';
 
 const PLACE_PAGE_SIZE = 50;
@@ -79,6 +79,7 @@ function buildCard(entry) {
   return CodeCard({
     entry,
     redeemed: Boolean(state.redeemed[redeemKey(entry)]),
+    reportUrl: buildReportUrl(entry.url),
     onToggleRedeemed: () => {
       setRedeemed(toggleRedeemed(state.redeemed, redeemKey(entry)));
       // 只換掉這一張，不重繪整份清單
@@ -151,7 +152,7 @@ function bindBackup() {
   });
   $('backup-import-form').addEventListener('submit', (event) => {
     event.preventDefault();
-    const { redeemed, added } = importRedeemed(state.redeemed, $('backup-import').value);
+    const { redeemed, added } = importRedeemed(state.redeemed, $('backup-import').value, state.codes);
     setRedeemed(redeemed);
     renderCodes();
     renderPlaces();
@@ -257,55 +258,9 @@ function renderScanResult() {
         renderCodes();
         renderScanResult();
       },
-      form: known?.code ? null : buildSubmitForm(id, Boolean(known)),
+      submitUrl: buildIssueUrl(canonicalUrl(id)),
+      reportUrl: buildReportUrl(canonicalUrl(id)),
     }),
-  );
-}
-
-/** 未收錄或缺代號的 QR Code：前往 GitHub 投稿，代號可留空。 */
-function buildSubmitForm(id, fillCodeOnly) {
-  const input = el('input', {
-    type: 'text',
-    inputmode: 'numeric',
-    maxlength: '5',
-    placeholder: '五位數代號',
-    'aria-label': '代號',
-    autocomplete: 'off',
-    class: 'code-input',
-  });
-  const error = el('p', { class: 'field-error', hidden: true });
-  const submit = el('button', {
-    type: 'submit',
-    class: 'btn primary',
-    text: fillCodeOnly ? '前往 GitHub 補代號' : '前往 GitHub 送出',
-    disabled: fillCodeOnly,
-  });
-
-  const check = () => {
-    input.value = input.value.replace(/\D/g, '').slice(0, 5);
-    const code = input.value;
-    const valid = CODE_PATTERN.test(code);
-    const taken = valid ? state.codes.find((c) => c.code === code) : null;
-    error.textContent = taken ? `${code} 已對應另一個 QR Code` : '';
-    error.hidden = !taken;
-    // 新的 QR 代號可留空；補代號一定要填
-    submit.disabled = Boolean(taken) || (code !== '' && !valid) || (fillCodeOnly && !valid);
-    return valid ? code : '';
-  };
-  input.addEventListener('input', check);
-
-  return el(
-    'form',
-    {
-      class: 'submit-form',
-      onSubmit: (event) => {
-        event.preventDefault();
-        const code = check();
-        if (submit.disabled) return;
-        window.open(buildIssueUrl({ url: canonicalUrl(id), code }), '_blank', 'noopener');
-      },
-    },
-    [el('div', { class: 'input-row' }, [input, submit]), error],
   );
 }
 

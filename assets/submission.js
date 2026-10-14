@@ -1,10 +1,10 @@
 /**
- * 投稿驗證與收錄邏輯。網站投稿表單與 GitHub Action 共用同一份規則。
+ * 投稿、回報的驗證與收錄邏輯。網站與 GitHub Action 共用同一份規則。
+ * 只以網址的 q 判斷是否重複；資料保留 code 欄位，但不再收集代號。
  */
 import { SITE_CONFIG } from './config.js';
 
 const ID_PATTERN = /^[0-9a-f]{12}$/;
-export const CODE_PATTERN = /^\d{5}$/;
 
 /** 統一成 LIFF 標準網址。 */
 export function canonicalUrl(id) {
@@ -31,60 +31,55 @@ export function parseStarUrl(input) {
 
 /**
  * 驗證投稿內容。
- * @param {{ url?: string, code?: string }} input
- * @returns {{ ok: true, value: { id: string, url: string, code: string } } | { ok: false, errors: string[] }}
+ * @param {{ url?: string }} input
+ * @returns {{ ok: true, value: { id: string, url: string } } | { ok: false, errors: string[] }}
  */
 export function validateSubmission(input) {
-  const errors = [];
   const id = parseStarUrl(input.url);
-  if (!id) errors.push('網址不是星級遊戲的 QR Code');
-
-  // 代號可留空，之後再補
-  const code = String(input.code ?? '').trim();
-  if (code && !CODE_PATTERN.test(code)) errors.push('代號要是 5 位數字');
-
-  if (errors.length > 0) return { ok: false, errors };
-  return { ok: true, value: { id, url: canonicalUrl(id), code } };
+  if (!id) return { ok: false, errors: ['網址不是星級遊戲的 QR Code'] };
+  return { ok: true, value: { id, url: canonicalUrl(id) } };
 }
 
 /**
- * 把投稿併入清單。
- * - added：新的 QR Code（代號可空）
- * - updated：已收錄但沒代號，補上代號
- * - duplicate：同一個 QR Code 已收錄
- * - conflict：代號已對應另一個 QR Code，需人工確認
- * @param {Array<{ id: string, code: string }>} codes 現有清單（不會被修改）
- * @param {{ id: string, url: string, code: string }} entry 已驗證的投稿
+ * 把投稿併入清單，只以 q 判斷重複。
+ * @param {Array<{ id: string }>} codes 現有清單（不會被修改）
+ * @param {{ id: string, url: string }} entry 已驗證的投稿
  * @param {{ addedAt: string, source: string }} meta
- * @returns {{ status: 'added' | 'updated' | 'duplicate' | 'conflict', codes: Array<object>, existing?: object }}
+ * @returns {{ status: 'added' | 'duplicate', codes: Array<object>, existing?: object }}
  */
 export function mergeCode(codes, entry, meta) {
-  const sameCode = entry.code ? codes.find((c) => c.code === entry.code && c.id !== entry.id) : null;
-  if (sameCode) return { status: 'conflict', codes, existing: sameCode };
-
-  const index = codes.findIndex((c) => c.id === entry.id);
-  if (index !== -1) {
-    const existing = codes[index];
-    if (existing.code || !entry.code) return { status: 'duplicate', codes, existing };
-    const next = [...codes];
-    next[index] = { ...existing, code: entry.code };
-    return { status: 'updated', codes: next, existing };
-  }
-
-  const added = { id: entry.id, code: entry.code, url: entry.url, addedAt: meta.addedAt, source: meta.source };
+  const existing = codes.find((c) => c.id === entry.id);
+  if (existing) return { status: 'duplicate', codes, existing };
+  const added = { id: entry.id, code: '', url: entry.url, addedAt: meta.addedAt, source: meta.source };
   return { status: 'added', codes: [...codes, added] };
 }
 
 /**
- * 產生預先填好的 GitHub Issue 投稿網址。
- * @param {{ url: string, code: string }} value
+ * 記錄一筆「無法使用」回報。同一個帳號只算一次。
+ * @param {Array<{ id: string, reports?: string[] }>} codes 現有清單（不會被修改）
+ * @returns {{ status: 'reported' | 'already' | 'unknown', codes: Array<object>, count: number }}
  */
-export function buildIssueUrl(value) {
-  const params = new URLSearchParams({
-    template: SITE_CONFIG.issueTemplate,
-    title: `投稿：${value.code || value.url.split('q=')[1]}`,
-    url: value.url,
-  });
-  if (value.code) params.set('code', value.code);
+export function addReport(codes, id, reporter) {
+  const index = codes.findIndex((c) => c.id === id);
+  if (index === -1) return { status: 'unknown', codes, count: 0 };
+  const reports = codes[index].reports ?? [];
+  if (reports.includes(reporter)) return { status: 'already', codes, count: reports.length };
+  const next = [...codes];
+  next[index] = { ...codes[index], reports: [...reports, reporter] };
+  return { status: 'reported', codes: next, count: reports.length + 1 };
+}
+
+function issueUrl(template, title, url) {
+  const params = new URLSearchParams({ template, title, url });
   return `https://github.com/${SITE_CONFIG.repoOwner}/${SITE_CONFIG.repoName}/issues/new?${params}`;
+}
+
+/** 預先填好的投稿 Issue 網址。 */
+export function buildIssueUrl(url) {
+  return issueUrl(SITE_CONFIG.issueTemplate, `投稿：${url.slice(-5)}`, url);
+}
+
+/** 預先填好的「無法使用」回報 Issue 網址。 */
+export function buildReportUrl(url) {
+  return issueUrl(SITE_CONFIG.reportTemplate, `回報無法使用：${url.slice(-5)}`, url);
 }

@@ -1,4 +1,4 @@
-// 把 quick-scan-dev 複製出來的文字併入 data/codes.json。
+// 把 quick-scan-dev 複製出來的網址併入 data/codes.json，只以 q 判斷重複。
 // 用法：node scripts/add-codes.mjs <文字檔>，或從 stdin 貼上。
 import { readFileSync, writeFileSync } from 'node:fs';
 import { parseExportText } from '../assets/scan-list.js';
@@ -10,18 +10,15 @@ const { entries, skipped } = parseExportText(input);
 
 let codes = JSON.parse(readFileSync(CODES_PATH, 'utf8'));
 const addedAt = new Date().toISOString().slice(0, 10);
-const report = { added: [], updated: [], duplicate: [], conflict: [] };
+const report = { added: [], duplicate: [] };
 for (const entry of entries) {
   const merged = mergeCode(codes, entry, { addedAt, source: 'quick-scan' });
   codes = merged.codes;
-  const label = entry.code || `${entry.id}（待補代號）`;
-  report[merged.status].push(merged.status === 'conflict' ? `${entry.code}（已對應 ${merged.existing.id}，本次 ${entry.id}）` : label);
+  report[merged.status].push(entry.id);
 }
 writeFileSync(CODES_PATH, JSON.stringify(codes, null, 2) + '\n');
 
 console.log(`新增 ${report.added.length}：${report.added.join(' ')}`);
-console.log(`補代號 ${report.updated.length}：${report.updated.join(' ')}`);
 console.log(`已存在 ${report.duplicate.length}：${report.duplicate.join(' ')}`);
-console.log(`代號衝突 ${report.conflict.length}：${report.conflict.join('、')}`);
 console.log(`無法解析 ${skipped.length}`);
 for (const line of skipped) console.log(`  ${line}`);

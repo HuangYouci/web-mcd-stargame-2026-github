@@ -419,16 +419,17 @@ tr.empty td {
 
   .code-title {
     display: flex;
+    flex-wrap: wrap;
     align-items: baseline;
-    gap: 8px;
-
-    span {
-      font-size: 12px;
-    }
+    gap: 2px 8px;
   }
 
-  .code.pending {
-    color: var(--text-muted);
+  .report-link {
+    align-self: flex-start;
+  }
+
+  &.is-reported {
+    border-style: dashed;
   }
 
   .code-actions {
@@ -450,6 +451,23 @@ tr.empty td {
       color: var(--text-muted);
       text-decoration: line-through;
     }
+  }
+}
+
+.reported {
+  color: var(--danger);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.report-link {
+  color: var(--text-muted);
+  font-size: 12px;
+  text-decoration: none;
+
+  &:hover {
+    color: var(--danger);
+    text-decoration: underline;
   }
 }
 
@@ -561,6 +579,18 @@ tr.empty td {
     font-size: 26px !important;
   }
 
+  .scan-actions-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .submit-link {
+    align-self: flex-start;
+    height: 36px;
+  }
+
   .notice {
     margin: 0;
     padding: 8px 12px;
@@ -571,18 +601,6 @@ tr.empty td {
 
 }
 
-.submit-form {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding-top: 12px;
-  border-top: 1px solid var(--border-muted);
-
-  .btn {
-    align-self: flex-start;
-    height: 36px;
-  }
-}
 
 .field {
   display: flex;
@@ -601,10 +619,7 @@ tr.empty td {
   }
 }
 
-.code-input {
-  font-family: var(--mono);
-  letter-spacing: 0.15em;
-}
+
 
 .input-row {
   display: flex;

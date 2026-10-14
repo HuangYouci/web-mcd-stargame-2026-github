@@ -2,7 +2,7 @@
  * 開發用快速掃描：相機持續掃，符合格式的 QR 自動加入清單，複製後交給 scripts/add-codes.mjs 收錄。
  */
 import { getQrReader } from '../assets/qr-reader.js';
-import { addScan, removeScan, setScanCode, toExportText } from '../assets/scan-list.js';
+import { addScan, removeScan, toExportText } from '../assets/scan-list.js';
 import { parseStarUrl } from '../assets/submission.js';
 
 const STORAGE_KEY = 'mcd-stargame-2026:quick-scan';
@@ -22,7 +22,7 @@ function loadList() {
 
 const state = {
   list: loadList(),
-  known: new Map(),
+  known: new Set(),
 };
 
 function save() {
@@ -48,29 +48,9 @@ function renderRow(scan) {
   const li = document.createElement('li');
   const id = document.createElement('span');
   id.className = 'id';
-  const knownCode = state.known.get(scan.id);
-
-  if (knownCode) {
-    id.textContent = `${knownCode} · 已收錄`;
-    id.classList.add('known');
-    const spacer = document.createElement('span');
-    li.append(id, spacer);
-  } else {
-    id.textContent = state.known.has(scan.id) ? `${scan.id} · 已收錄 · 待補代號` : scan.id;
-    const input = document.createElement('input');
-    input.type = 'text';
-    input.inputMode = 'numeric';
-    input.maxLength = 5;
-    input.placeholder = '代號';
-    input.value = scan.code;
-    input.setAttribute('aria-label', `${scan.id} 的代號`);
-    input.addEventListener('input', () => {
-      input.value = input.value.replace(/\D/g, '').slice(0, 5);
-      state.list = setScanCode(state.list, scan.id, input.value);
-      save();
-    });
-    li.append(id, input);
-  }
+  const known = state.known.has(scan.id);
+  id.textContent = known ? `${scan.id} · 已收錄` : scan.id;
+  if (known) id.classList.add('known');
 
   const remove = document.createElement('button');
   remove.type = 'button';
@@ -81,7 +61,7 @@ function renderRow(scan) {
     save();
     render();
   });
-  li.append(remove);
+  li.append(id, remove);
   return li;
 }
 
@@ -105,7 +85,7 @@ function handleText(text) {
   save();
   render();
   if (state.known.has(id)) {
-    flash('known', `已收錄 ${state.known.get(id) || `${id.slice(-5)} 待補代號`}`);
+    flash('known', `已收錄 ${id.slice(-5)}`);
   } else {
     flash('new', `新 ${id}`);
     navigator.vibrate?.(60);
@@ -181,7 +161,7 @@ async function loadKnown() {
     const response = await fetch('../data/codes.json', { cache: 'no-cache' });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const codes = await response.json();
-    state.known = new Map(codes.map((c) => [c.id, c.code]));
+    state.known = new Set(codes.map((c) => c.id));
   } catch (error) {
     console.error('quickScan.loadKnown | 讀取已收錄清單失敗', error);
     showError('已收錄清單載入失敗');

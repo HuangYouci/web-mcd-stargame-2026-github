@@ -3,7 +3,7 @@
  * 格式為「### 標籤」接空行再接值，未填欄位的值為「_No response_」。
  */
 
-export const FIELD_LABELS = { 網址: 'url', 代號: 'code' };
+export const FIELD_LABELS = { 網址: 'url' };
 
 /**
  * @param {string} body

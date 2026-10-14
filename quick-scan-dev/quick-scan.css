@@ -91,7 +91,7 @@ body.quick-scan {
 
   li {
     display: grid;
-    grid-template-columns: 1fr auto auto;
+    grid-template-columns: 1fr auto;
     gap: 8px;
     align-items: center;
     padding: 8px 12px;
@@ -107,11 +107,5 @@ body.quick-scan {
 
   .known {
     color: var(--text-muted);
-  }
-
-  input {
-    width: 92px;
-    font-family: var(--mono);
-    letter-spacing: 0.1em;
   }
 }

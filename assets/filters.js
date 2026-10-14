@@ -9,7 +9,8 @@ function includesText(fields, query) {
 }
 
 /**
- * @param {Array<{ id: string, code: string }>} codes
+ * 排序：沒人回報的在前，各自依收錄日新到舊。
+ * @param {Array<{ id: string, addedAt: string, reports?: string[] }>} codes
  * @param {{ query: string, status: 'all' | 'todo' | 'done' }} filter
  * @param {Record<string, string>} redeemed
  */
@@ -19,12 +20,12 @@ export function filterCodes(codes, filter, redeemed) {
       const done = Boolean(redeemed[redeemKey(c)]);
       if (filter.status === 'todo' && done) return false;
       if (filter.status === 'done' && !done) return false;
-      return includesText([c.code, c.id], filter.query);
+      return includesText([c.id], filter.query);
     })
     .sort((a, b) => {
-      // 沒有代號的排最後
-      if (!a.code !== !b.code) return a.code ? -1 : 1;
-      return a.code.localeCompare(b.code) || a.id.localeCompare(b.id);
+      const ra = a.reports?.length ? 1 : 0;
+      const rb = b.reports?.length ? 1 : 0;
+      return ra - rb || String(b.addedAt).localeCompare(String(a.addedAt)) || a.id.localeCompare(b.id);
     });
 }
 

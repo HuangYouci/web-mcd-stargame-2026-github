@@ -46,28 +46,32 @@ export function QrImage({ text, label }) {
 /**
  * QR Code 卡片。QR 圖形由 onQrSlot 決定何時掛上（例如進入畫面才產生）。
  * @param {{
- *   entry: { code: string, url: string },
+ *   entry: { id: string, url: string, reports?: string[] },
  *   redeemed: boolean,
+ *   reportUrl: string,
  *   onToggleRedeemed: () => void,
  *   onShowQr: () => void,
  *   onQrSlot: (slot: HTMLElement) => void,
  * }} props
  */
-export function CodeCard({ entry, redeemed, onToggleRedeemed, onShowQr, onQrSlot }) {
+export function CodeCard({ entry, redeemed, reportUrl, onToggleRedeemed, onShowQr, onQrSlot }) {
+  const label = displayLabel(entry);
+  const reports = entry.reports?.length ?? 0;
   const slot = el('button', {
     type: 'button',
     class: 'qr-slot',
-    'aria-label': `放大 ${displayLabel(entry)} 的 QR Code`,
+    'aria-label': `放大 ${label} 的 QR Code`,
     'data-text': entry.url,
     onClick: onShowQr,
   });
   onQrSlot(slot);
 
-  return el('article', { class: redeemed ? 'code-card is-redeemed' : 'code-card', 'data-id': entry.id }, [
+  const classes = ['code-card', redeemed ? 'is-redeemed' : '', reports ? 'is-reported' : ''].filter(Boolean).join(' ');
+  return el('article', { class: classes, 'data-id': entry.id }, [
     slot,
     el('div', { class: 'code-title' }, [
-      el('strong', { class: entry.code ? 'code' : 'code pending', text: displayLabel(entry) }),
-      entry.code ? null : el('span', { class: 'muted', text: '待補代號' }),
+      el('strong', { class: 'code', text: label }),
+      reports ? el('span', { class: 'reported', text: `${reports} 人回報無法使用` }) : null,
     ]),
     el('div', { class: 'code-actions' }, [
       el('label', { class: 'check-label' }, [
@@ -76,6 +80,7 @@ export function CodeCard({ entry, redeemed, onToggleRedeemed, onShowQr, onQrSlot
       ]),
       el('a', { class: 'btn', href: entry.url, target: '_blank', rel: 'noopener', text: '開啟網址' }),
     ]),
+    el('a', { class: 'report-link', href: reportUrl, target: '_blank', rel: 'noopener', text: '回報無法使用' }),
   ]);
 }
 
@@ -97,30 +102,31 @@ export function PlaceRow({ place, mapsUrl }) {
  * 掃描結果。
  * @param {{
  *   id: string,
- *   known: { id: string, code: string } | null,
+ *   known: { id: string, reports?: string[] } | null,
  *   redeemedAt: string | null,
  *   onToggleRedeemed: () => void,
- *   form: HTMLElement | null,
+ *   submitUrl: string,
+ *   reportUrl: string,
  * }} props
  */
-export function ScanResult({ id, known, redeemedAt, onToggleRedeemed, form }) {
-  const head = known
-    ? el('div', { class: 'scan-head' }, [
-        el('strong', { class: 'scan-code', text: displayLabel(known) }),
-        el('span', { class: 'muted', text: known.code ? '已收錄' : '已收錄 · 待補代號' }),
-      ])
-    : el('div', { class: 'scan-head' }, [el('strong', { text: '未收錄' }), el('span', { class: 'muted mono', text: `q=${id}` })]);
-
+export function ScanResult({ id, known, redeemedAt, onToggleRedeemed, submitUrl, reportUrl }) {
+  const reports = known?.reports?.length ?? 0;
   return el('div', { class: 'scan-result' }, [
-    head,
+    el('div', { class: 'scan-head' }, [
+      el('strong', { class: 'scan-code', text: id.slice(-5) }),
+      el('span', { class: 'muted', text: known ? '已收錄' : '未收錄' }),
+      reports ? el('span', { class: 'reported', text: `${reports} 人回報無法使用` }) : null,
+    ]),
     redeemedAt ? el('p', { class: 'notice', text: `已兌換 · ${formatDate(redeemedAt)}` }) : null,
     known
-      ? el('label', { class: 'check-label' }, [
-          el('input', { type: 'checkbox', checked: Boolean(redeemedAt), onChange: onToggleRedeemed }),
-          el('span', { text: '已兌換' }),
+      ? el('div', { class: 'scan-actions-row' }, [
+          el('label', { class: 'check-label' }, [
+            el('input', { type: 'checkbox', checked: Boolean(redeemedAt), onChange: onToggleRedeemed }),
+            el('span', { text: '已兌換' }),
+          ]),
+          el('a', { class: 'report-link', href: reportUrl, target: '_blank', rel: 'noopener', text: '回報無法使用' }),
         ])
-      : null,
-    form,
+      : el('a', { class: 'btn primary submit-link', href: submitUrl, target: '_blank', rel: 'noopener', text: '前往 GitHub 投稿' }),
   ]);
 }
 
