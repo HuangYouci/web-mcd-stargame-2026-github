@@ -440,8 +440,10 @@ tr.empty td {
   &.is-redeemed {
     background: var(--surface);
 
+    /* 只調透明度相機仍掃得到，模糊到 3px 以上才完全掃不出來，避免誤掃已兌換的 */
     .qr {
-      opacity: 0.25;
+      opacity: 0.35;
+      filter: blur(6px);
     }
 
     .code {
