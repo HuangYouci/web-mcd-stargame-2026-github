@@ -5,7 +5,7 @@ import { SITE_CONFIG } from './config.js';
 import { filterCodes, filterPlaces, mapsSearchUrl } from './filters.js';
 import { decodePlaces } from './places.js';
 import { getQrReader } from './qr-reader.js';
-import { exportRedeemed, importRedeemed, loadRedeemed, saveRedeemed, toggleRedeemed } from './store.js';
+import { exportRedeemed, importRedeemed, loadRedeemed, migrateRedeemed, redeemKey, saveRedeemed, toggleRedeemed } from './store.js';
 import { CODE_PATTERN, buildIssueUrl, canonicalUrl, parseStarUrl } from './submission.js';
 import { CodeCard, EmptyRow, EmptyState, PlaceRow, PromoCard, QrImage, ScanResult, el } from './views.js';
 
@@ -48,7 +48,7 @@ function setRedeemed(next) {
 }
 
 function renderStats() {
-  const known = new Set(state.codes.map((c) => c.code));
+  const known = new Set(state.codes.map(redeemKey));
   $('stat-redeemed').textContent = String(Object.keys(state.redeemed).filter((c) => known.has(c)).length);
   $('stat-codes').textContent = String(state.codes.length);
 }
@@ -78,11 +78,11 @@ function mountQr(slot) {
 function buildCard(entry) {
   return CodeCard({
     entry,
-    redeemed: Boolean(state.redeemed[entry.code]),
+    redeemed: Boolean(state.redeemed[redeemKey(entry)]),
     onToggleRedeemed: () => {
-      setRedeemed(toggleRedeemed(state.redeemed, entry.code));
+      setRedeemed(toggleRedeemed(state.redeemed, redeemKey(entry)));
       // 只換掉這一張，不重繪整份清單
-      const old = $('code-grid').querySelector(`[data-code="${entry.code}"]`);
+      const old = $('code-grid').querySelector(`[data-id="${entry.id}"]`);
       const visible = filterCodes([entry], state.codeFilter, state.redeemed).length > 0;
       if (old && visible) old.replaceWith(buildCard(entry));
       else renderCodes();
@@ -100,8 +100,8 @@ function renderCodes() {
 }
 
 function openQrDialog(entry) {
-  $('qr-dialog-title').textContent = entry.code;
-  $('qr-dialog-body').replaceChildren(QrImage({ text: entry.url, label: `${entry.code} 的 QR Code` }));
+  $('qr-dialog-title').textContent = entry.code || '待補代號';
+  $('qr-dialog-body').replaceChildren(QrImage({ text: entry.url, label: `${entry.code || entry.id} 的 QR Code` }));
   $('qr-dialog-link').href = entry.url;
   $('qr-dialog').showModal();
 }
@@ -245,7 +245,7 @@ function renderScanResult() {
   const id = state.scannedId;
   if (!id) return;
   const known = state.codes.find((c) => c.id === id) ?? null;
-  const redeemedAt = known ? (state.redeemed[known.code] ?? null) : null;
+  const redeemedAt = known ? (state.redeemed[redeemKey(known)] ?? null) : null;
   $('scan-result').replaceChildren(
     ScanResult({
       id,
@@ -253,17 +253,17 @@ function renderScanResult() {
       redeemedAt,
       onToggleRedeemed: () => {
         if (!known) return;
-        setRedeemed(toggleRedeemed(state.redeemed, known.code));
+        setRedeemed(toggleRedeemed(state.redeemed, redeemKey(known)));
         renderCodes();
         renderScanResult();
       },
-      form: known ? null : buildSubmitForm(id),
+      form: known?.code ? null : buildSubmitForm(id, Boolean(known)),
     }),
   );
 }
 
-/** 未收錄的 QR Code：填五位數代號後前往 GitHub 投稿。 */
-function buildSubmitForm(id) {
+/** 未收錄或缺代號的 QR Code：前往 GitHub 投稿，代號可留空。 */
+function buildSubmitForm(id, fillCodeOnly) {
   const input = el('input', {
     type: 'text',
     inputmode: 'numeric',
@@ -274,16 +274,23 @@ function buildSubmitForm(id) {
     class: 'code-input',
   });
   const error = el('p', { class: 'field-error', hidden: true });
-  const submit = el('button', { type: 'submit', class: 'btn primary', text: '前往 GitHub 送出', disabled: true });
+  const submit = el('button', {
+    type: 'submit',
+    class: 'btn primary',
+    text: fillCodeOnly ? '前往 GitHub 補代號' : '前往 GitHub 送出',
+    disabled: fillCodeOnly,
+  });
 
   const check = () => {
     input.value = input.value.replace(/\D/g, '').slice(0, 5);
     const code = input.value;
-    const taken = CODE_PATTERN.test(code) ? state.codes.find((c) => c.code === code) : null;
+    const valid = CODE_PATTERN.test(code);
+    const taken = valid ? state.codes.find((c) => c.code === code) : null;
     error.textContent = taken ? `${code} 已對應另一個 QR Code` : '';
     error.hidden = !taken;
-    submit.disabled = !CODE_PATTERN.test(code) || Boolean(taken);
-    return code;
+    // 新的 QR 代號可留空；補代號一定要填
+    submit.disabled = Boolean(taken) || (code !== '' && !valid) || (fillCodeOnly && !valid);
+    return valid ? code : '';
   };
   input.addEventListener('input', check);
 
@@ -435,6 +442,8 @@ async function main() {
 
   try {
     state.codes = await fetchJson('data/codes.json');
+    const migrated = migrateRedeemed(state.redeemed, state.codes);
+    if (migrated !== state.redeemed) setRedeemed(migrated);
   } catch (error) {
     console.error('app.main | 讀取 QR Code 清單失敗', error);
     $('code-grid').replaceChildren(EmptyState({ text: 'QR Code 清單載入失敗。' }));

@@ -56,15 +56,17 @@ export function CodeCard({ entry, redeemed, onToggleRedeemed, onShowQr, onQrSlot
   const slot = el('button', {
     type: 'button',
     class: 'qr-slot',
-    'aria-label': `放大 ${entry.code} 的 QR Code`,
+    'aria-label': `放大 ${entry.code || entry.id} 的 QR Code`,
     'data-text': entry.url,
     onClick: onShowQr,
   });
   onQrSlot(slot);
 
-  return el('article', { class: redeemed ? 'code-card is-redeemed' : 'code-card', 'data-code': entry.code }, [
+  return el('article', { class: redeemed ? 'code-card is-redeemed' : 'code-card', 'data-id': entry.id }, [
     slot,
-    el('strong', { class: 'code', text: entry.code }),
+    entry.code
+      ? el('strong', { class: 'code', text: entry.code })
+      : el('div', { class: 'code-pending' }, [el('strong', { text: '待補代號' }), el('span', { class: 'mono muted', text: entry.id })]),
     el('div', { class: 'code-actions' }, [
       el('label', { class: 'check-label' }, [
         el('input', { type: 'checkbox', checked: redeemed, onChange: onToggleRedeemed }),
@@ -93,7 +95,7 @@ export function PlaceRow({ place, mapsUrl }) {
  * 掃描結果。
  * @param {{
  *   id: string,
- *   known: { code: string } | null,
+ *   known: { id: string, code: string } | null,
  *   redeemedAt: string | null,
  *   onToggleRedeemed: () => void,
  *   form: HTMLElement | null,
@@ -101,7 +103,10 @@ export function PlaceRow({ place, mapsUrl }) {
  */
 export function ScanResult({ id, known, redeemedAt, onToggleRedeemed, form }) {
   const head = known
-    ? el('div', { class: 'scan-head' }, [el('strong', { class: 'scan-code', text: known.code }), el('span', { class: 'muted', text: '已收錄' })])
+    ? el('div', { class: 'scan-head' }, [
+        known.code ? el('strong', { class: 'scan-code', text: known.code }) : el('strong', { text: '待補代號' }),
+        el('span', { class: 'muted', text: '已收錄' }),
+      ])
     : el('div', { class: 'scan-head' }, [el('strong', { text: '未收錄' }), el('span', { class: 'muted mono', text: `q=${id}` })]);
 
   return el('div', { class: 'scan-result' }, [

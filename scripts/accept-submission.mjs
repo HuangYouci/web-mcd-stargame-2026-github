@@ -1,6 +1,6 @@
 // GitHub Action 用：讀取投稿 Issue 並驗證。
 // MODE=check：只檢查不寫入，result=ready|duplicate|conflict|invalid
-// MODE=apply：管理者加上「收錄」標籤後寫入 data/codes.json，result=added|duplicate|conflict|invalid
+// MODE=apply：管理者加上「收錄」標籤後寫入 data/codes.json，result=added|updated|duplicate|conflict|invalid
 // 回覆內容寫到 comment.md。
 import { appendFileSync, readFileSync, writeFileSync } from 'node:fs';
 import { mergeCode, validateSubmission } from '../assets/submission.js';
@@ -29,21 +29,22 @@ if (!validation.ok) {
     addedAt: new Date().toISOString().slice(0, 10),
     source: `#${issue.number}`,
   });
-  const summary = [`- 代號：\`${code}\``, `- 網址：${url}`].join('\n');
+  const summary = [`- 代號：${code ? `\`${code}\`` : '待補'}`, `- 網址：${url}`].join('\n');
 
   if (merged.status === 'duplicate') {
     result = 'duplicate';
-    comment = `這個 QR Code 已經收錄為 \`${merged.existing.code}\`。`;
+    comment = merged.existing.code ? `這個 QR Code 已經收錄為 \`${merged.existing.code}\`。` : '這個 QR Code 已經收錄（待補代號）。';
   } else if (merged.status === 'conflict') {
     result = 'conflict';
     comment = `代號 \`${code}\` 已對應另一個 QR Code（${merged.existing.url}）。\n\n${summary}`;
   } else if (mode === 'check') {
     result = 'ready';
-    comment = `格式正確，等管理者確認。\n\n${summary}`;
+    const kind = merged.status === 'updated' ? '補代號' : '新的 QR Code';
+    comment = `格式正確（${kind}），等管理者確認。\n\n${summary}`;
   } else {
     result = merged.status;
     writeFileSync(CODES_PATH, JSON.stringify(merged.codes, null, 2) + '\n');
-    comment = `已收錄，網站幾分鐘內更新。\n\n${summary}`;
+    comment = `${merged.status === 'updated' ? '已補上代號' : '已收錄'}，網站幾分鐘內更新。\n\n${summary}`;
   }
 }
 

@@ -10,15 +10,17 @@ const { entries, skipped } = parseExportText(input);
 
 let codes = JSON.parse(readFileSync(CODES_PATH, 'utf8'));
 const addedAt = new Date().toISOString().slice(0, 10);
-const report = { added: [], duplicate: [], conflict: [] };
+const report = { added: [], updated: [], duplicate: [], conflict: [] };
 for (const entry of entries) {
   const merged = mergeCode(codes, entry, { addedAt, source: 'quick-scan' });
   codes = merged.codes;
-  report[merged.status].push(merged.status === 'conflict' ? `${entry.code}（已對應 ${merged.existing.id}，本次 ${entry.id}）` : entry.code);
+  const label = entry.code || `${entry.id}（待補代號）`;
+  report[merged.status].push(merged.status === 'conflict' ? `${entry.code}（已對應 ${merged.existing.id}，本次 ${entry.id}）` : label);
 }
 writeFileSync(CODES_PATH, JSON.stringify(codes, null, 2) + '\n');
 
 console.log(`新增 ${report.added.length}：${report.added.join(' ')}`);
+console.log(`補代號 ${report.updated.length}：${report.updated.join(' ')}`);
 console.log(`已存在 ${report.duplicate.length}：${report.duplicate.join(' ')}`);
 console.log(`代號衝突 ${report.conflict.length}：${report.conflict.join('、')}`);
 console.log(`無法解析 ${skipped.length}`);

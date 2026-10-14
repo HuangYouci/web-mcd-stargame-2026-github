@@ -30,8 +30,10 @@ test('validateSubmission 整理欄位', () => {
   assert.deepEqual(result.value, { id: '4f1d82f3f089', url: URL_A, code: '07029' });
 });
 
-test('validateSubmission 代號必填且為五位數', () => {
-  for (const code of ['', '1234', '123456', 'abcde', '0702９']) {
+test('validateSubmission 代號可空，有填就要五位數', () => {
+  assert.equal(validateSubmission({ url: URL_A, code: '' }).ok, true);
+  assert.equal(validateSubmission({ url: URL_A }).value.code, '');
+  for (const code of ['1234', '123456', 'abcde', '0702９']) {
     const result = validateSubmission({ url: URL_A, code });
     assert.equal(result.ok, false, code);
   }
@@ -39,7 +41,7 @@ test('validateSubmission 代號必填且為五位數', () => {
   assert.equal(both.errors.length, 2);
 });
 
-test('mergeCode 新增、重複、代號衝突', () => {
+test('mergeCode 新增、補代號、重複、代號衝突', () => {
   const meta = { addedAt: '2026-10-14', source: '#1' };
   const entry = { id: '4f1d82f3f089', url: URL_A, code: '07029' };
 
@@ -48,13 +50,23 @@ test('mergeCode 新增、重複、代號衝突', () => {
   assert.deepEqual(added.codes, [{ ...entry, addedAt: '2026-10-14', source: '#1' }]);
 
   const dup = mergeCode(added.codes, { ...entry, code: '99999' }, meta);
-  assert.equal(dup.status, 'duplicate');
+  assert.equal(dup.status, 'duplicate', '已有代號不覆蓋');
   assert.equal(dup.codes, added.codes);
-  assert.equal(dup.existing.code, '07029');
+
+  const pending = mergeCode([], { ...entry, code: '' }, meta);
+  assert.equal(pending.status, 'added');
+  assert.equal(pending.codes[0].code, '');
+  assert.equal(mergeCode(pending.codes, { ...entry, code: '' }, meta).status, 'duplicate');
+
+  const filled = mergeCode(pending.codes, entry, meta);
+  assert.equal(filled.status, 'updated');
+  assert.equal(filled.codes[0].code, '07029');
+  assert.equal(pending.codes[0].code, '', '原陣列不應被修改');
 
   const conflict = mergeCode(added.codes, { id: 'aaaaaaaaaaaa', url: canonicalUrl('aaaaaaaaaaaa'), code: '07029' }, meta);
   assert.equal(conflict.status, 'conflict');
   assert.equal(conflict.codes, added.codes);
+  assert.equal(mergeCode(added.codes, { id: 'aaaaaaaaaaaa', url: canonicalUrl('aaaaaaaaaaaa'), code: '' }, meta).status, 'added');
 });
 
 test('buildIssueUrl 帶入表單欄位', () => {
@@ -64,6 +76,9 @@ test('buildIssueUrl 帶入表單欄位', () => {
   assert.equal(url.searchParams.get('title'), '投稿：07029');
   assert.equal(url.searchParams.get('url'), URL_A);
   assert.equal(url.searchParams.get('code'), '07029');
+  const noCode = new URL(buildIssueUrl({ url: URL_A, code: '' }));
+  assert.equal(noCode.searchParams.has('code'), false);
+  assert.equal(noCode.searchParams.get('title'), '投稿：4f1d82f3f089');
 });
 
 test('初始資料全部通過驗證且不重複', async () => {
@@ -78,7 +93,7 @@ test('初始資料全部通過驗證且不重複', async () => {
     assert.equal(result.value.id, c.id);
     assert.equal(c.url, canonicalUrl(c.id));
     assert.ok(!ids.has(c.id), `重複 ${c.id}`);
-    assert.ok(!codeSet.has(c.code), `代號重複 ${c.code}`);
+    assert.ok(!c.code || !codeSet.has(c.code), `代號重複 ${c.code}`);
     ids.add(c.id);
     codeSet.add(c.code);
   }

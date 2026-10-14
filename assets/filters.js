@@ -1,3 +1,5 @@
+import { redeemKey } from './store.js';
+
 /** 清單篩選與排序，純函式。 */
 
 function includesText(fields, query) {
@@ -7,17 +9,17 @@ function includesText(fields, query) {
 }
 
 /**
- * @param {Array<{ id: string, code: string, place: string }>} codes
+ * @param {Array<{ id: string, code: string }>} codes
  * @param {{ query: string, status: 'all' | 'todo' | 'done' }} filter
  * @param {Record<string, string>} redeemed
  */
 export function filterCodes(codes, filter, redeemed) {
   return codes
     .filter((c) => {
-      const done = Boolean(redeemed[c.id]);
+      const done = Boolean(redeemed[redeemKey(c)]);
       if (filter.status === 'todo' && done) return false;
       if (filter.status === 'done' && !done) return false;
-      return includesText([c.code, c.place, c.id], filter.query);
+      return includesText([c.code, c.id], filter.query);
     })
     .sort((a, b) => {
       // 沒有代號的排最後

@@ -20,18 +20,30 @@ test('addScan 去重且新的在前', () => {
   assert.deepEqual(removeScan(list, 'bbbbbbbbbbbb').map((s) => s.id), ['aaaaaaaaaaaa']);
 });
 
-test('匯出排除已收錄，未填代號寫 -----，可再解析回來', () => {
+test('匯出：未收錄的全部、已收錄缺代號且這次有填的；可再解析回來', () => {
   const list = [
     { id: 'aaaaaaaaaaaa', code: '07029' },
     { id: 'bbbbbbbbbbbb', code: '' },
     { id: 'cccccccccccc', code: '11111' },
+    { id: 'dddddddddddd', code: '22222' },
+    { id: 'eeeeeeeeeeee', code: '' },
   ];
-  const text = toExportText(list, new Set(['cccccccccccc']));
-  assert.equal(text, `07029 ${URL_A}\n----- ${URL_B}`);
+  const known = new Map([
+    ['cccccccccccc', '11111'],
+    ['dddddddddddd', ''],
+    ['eeeeeeeeeeee', ''],
+  ]);
+  const URL_D = 'https://liff.line.me/2010522144-5nZYW3pn?q=dddddddddddd';
+  const text = toExportText(list, known);
+  assert.equal(text, `07029 ${URL_A}\n----- ${URL_B}\n22222 ${URL_D}`);
 
   const { entries, skipped } = parseExportText(text);
-  assert.deepEqual(entries, [{ id: 'aaaaaaaaaaaa', url: URL_A, code: '07029' }]);
-  assert.deepEqual(skipped, [`----- ${URL_B}`]);
+  assert.deepEqual(entries, [
+    { id: 'aaaaaaaaaaaa', url: URL_A, code: '07029' },
+    { id: 'bbbbbbbbbbbb', url: URL_B, code: '' },
+    { id: 'dddddddddddd', url: URL_D, code: '22222' },
+  ]);
+  assert.deepEqual(skipped, []);
 });
 
 test('parseExportText 容忍順序、空白與雜訊', () => {

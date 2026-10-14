@@ -39,8 +39,9 @@ export function validateSubmission(input) {
   const id = parseStarUrl(input.url);
   if (!id) errors.push('網址不是星級遊戲的 QR Code');
 
+  // 代號可留空，之後再補
   const code = String(input.code ?? '').trim();
-  if (!CODE_PATTERN.test(code)) errors.push('代號要是 5 位數字');
+  if (code && !CODE_PATTERN.test(code)) errors.push('代號要是 5 位數字');
 
   if (errors.length > 0) return { ok: false, errors };
   return { ok: true, value: { id, url: canonicalUrl(id), code } };
@@ -48,20 +49,27 @@ export function validateSubmission(input) {
 
 /**
  * 把投稿併入清單。
- * - added：新的 QR Code
+ * - added：新的 QR Code（代號可空）
+ * - updated：已收錄但沒代號，補上代號
  * - duplicate：同一個 QR Code 已收錄
  * - conflict：代號已對應另一個 QR Code，需人工確認
  * @param {Array<{ id: string, code: string }>} codes 現有清單（不會被修改）
  * @param {{ id: string, url: string, code: string }} entry 已驗證的投稿
  * @param {{ addedAt: string, source: string }} meta
- * @returns {{ status: 'added' | 'duplicate' | 'conflict', codes: Array<object>, existing?: object }}
+ * @returns {{ status: 'added' | 'updated' | 'duplicate' | 'conflict', codes: Array<object>, existing?: object }}
  */
 export function mergeCode(codes, entry, meta) {
-  const sameId = codes.find((c) => c.id === entry.id);
-  if (sameId) return { status: 'duplicate', codes, existing: sameId };
-
-  const sameCode = codes.find((c) => c.code === entry.code);
+  const sameCode = entry.code ? codes.find((c) => c.code === entry.code && c.id !== entry.id) : null;
   if (sameCode) return { status: 'conflict', codes, existing: sameCode };
+
+  const index = codes.findIndex((c) => c.id === entry.id);
+  if (index !== -1) {
+    const existing = codes[index];
+    if (existing.code || !entry.code) return { status: 'duplicate', codes, existing };
+    const next = [...codes];
+    next[index] = { ...existing, code: entry.code };
+    return { status: 'updated', codes: next, existing };
+  }
 
   const added = { id: entry.id, code: entry.code, url: entry.url, addedAt: meta.addedAt, source: meta.source };
   return { status: 'added', codes: [...codes, added] };
@@ -74,9 +82,9 @@ export function mergeCode(codes, entry, meta) {
 export function buildIssueUrl(value) {
   const params = new URLSearchParams({
     template: SITE_CONFIG.issueTemplate,
-    title: `投稿：${value.code}`,
+    title: `投稿：${value.code || value.url.split('q=')[1]}`,
     url: value.url,
-    code: value.code,
   });
+  if (value.code) params.set('code', value.code);
   return `https://github.com/${SITE_CONFIG.repoOwner}/${SITE_CONFIG.repoName}/issues/new?${params}`;
 }

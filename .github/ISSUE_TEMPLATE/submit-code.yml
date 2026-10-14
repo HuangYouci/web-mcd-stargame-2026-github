@@ -15,5 +15,3 @@ body:
     attributes:
       label: 代號
       placeholder: "07029"
-    validations:
-      required: true

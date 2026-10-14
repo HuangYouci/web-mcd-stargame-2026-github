@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { test } from 'node:test';
 import { filterCodes, filterPlaces } from '../assets/filters.js';
 import { decodePlaces } from '../assets/places.js';
-import { exportRedeemed, importRedeemed, loadRedeemed, saveRedeemed, toggleRedeemed } from '../assets/store.js';
+import { exportRedeemed, importRedeemed, loadRedeemed, migrateRedeemed, redeemKey, saveRedeemed, toggleRedeemed } from '../assets/store.js';
 import { cityOf, normalizeName, parseKml, placeIdOf, pointsOf } from '../scripts/lib/kml.mjs';
 
 test('cityOf 處理異體字、省略縣名與郵遞區號', () => {
@@ -71,17 +71,31 @@ test('places.json 每個點位都有縣市', async () => {
   assert.equal(summary.pointCount, data.places.reduce((sum, p) => sum + p.points, 0));
 });
 
-test('filterCodes 依狀態與關鍵字篩選並依代號排序', () => {
+test('filterCodes 依兌換紀錄 key 篩選並依代號排序', () => {
   const codes = [
-    { id: 'b', code: '07680', place: '台中' },
-    { id: 'a', code: '03766', place: '' },
-    { id: 'c', code: '', place: '高雄' },
+    { id: 'bbbbbbbbbbbb', code: '07680' },
+    { id: 'aaaaaaaaaaaa', code: '03766' },
+    { id: 'cccccccccccc', code: '' },
   ];
-  const redeemed = { b: '2026-10-14' };
-  assert.deepEqual(filterCodes(codes, { query: '', status: 'all' }, redeemed).map((c) => c.id), ['a', 'b', 'c']);
-  assert.deepEqual(filterCodes(codes, { query: '', status: 'todo' }, redeemed).map((c) => c.id), ['a', 'c']);
-  assert.deepEqual(filterCodes(codes, { query: '', status: 'done' }, redeemed).map((c) => c.id), ['b']);
-  assert.deepEqual(filterCodes(codes, { query: '高雄', status: 'all' }, redeemed).map((c) => c.id), ['c']);
+  // 有代號以代號記、沒代號以 q 記
+  const redeemed = { '07680': '2026-10-14', cccccccccccc: '2026-10-14' };
+  const ids = (list) => list.map((c) => c.id[0]);
+  assert.deepEqual(ids(filterCodes(codes, { query: '', status: 'all' }, redeemed)), ['a', 'b', 'c']);
+  assert.deepEqual(ids(filterCodes(codes, { query: '', status: 'todo' }, redeemed)), ['a']);
+  assert.deepEqual(ids(filterCodes(codes, { query: '', status: 'done' }, redeemed)), ['b', 'c']);
+  assert.deepEqual(ids(filterCodes(codes, { query: '0376', status: 'all' }, redeemed)), ['a']);
+  assert.deepEqual(ids(filterCodes(codes, { query: 'cccc', status: 'all' }, redeemed)), ['c']);
+});
+
+test('redeemKey 與 migrateRedeemed：補上代號後紀錄搬到代號下', () => {
+  assert.equal(redeemKey({ id: 'aaaaaaaaaaaa', code: '' }), 'aaaaaaaaaaaa');
+  assert.equal(redeemKey({ id: 'aaaaaaaaaaaa', code: '07029' }), '07029');
+  const before = { aaaaaaaaaaaa: 't1', '07680': 't2' };
+  const after = migrateRedeemed(before, [{ id: 'aaaaaaaaaaaa', code: '07029' }, { id: 'bbbbbbbbbbbb', code: '07680' }]);
+  assert.deepEqual(after, { '07029': 't1', '07680': 't2' });
+  assert.equal(before.aaaaaaaaaaaa, 't1', '不修改原物件');
+  const untouched = { x: 1 };
+  assert.equal(migrateRedeemed(untouched, [{ id: 'aaaaaaaaaaaa', code: '' }]), untouched);
 });
 
 test('filterPlaces 類別 0 不被當成全部', () => {
@@ -119,16 +133,17 @@ test('decodePlaces 還原省略欄位', () => {
   ]);
 });
 
-test('匯出匯入五位數代號', () => {
+test('匯出匯入代號與 q', () => {
   const now = new Date('2026-10-14T00:00:00Z');
-  const redeemed = { '07680': 'x', '03766': 'y', junk: 'z' };
-  assert.equal(exportRedeemed(redeemed), '03766 07680');
+  const redeemed = { '07680': 'x', aaaaaaaaaaaa: 'q', '03766': 'y', junk: 'z' };
+  assert.equal(exportRedeemed(redeemed), '03766 07680 aaaaaaaaaaaa');
 
-  const { redeemed: next, added } = importRedeemed(redeemed, '07680, 07029\n123456 1234 a07899b', now);
+  const { redeemed: next, added } = importRedeemed(redeemed, '07680, 07029\n123456 1234 a07899b BBBBBBBBBBBB', now);
   assert.equal(added, 2);
   assert.equal(next['07680'], 'x', '已存在的保留原時間');
   assert.equal(next['07029'], '2026-10-14T00:00:00.000Z');
-  assert.equal(next['07899'], '2026-10-14T00:00:00.000Z');
+  assert.equal(next.bbbbbbbbbbbb, '2026-10-14T00:00:00.000Z', 'q 不分大小寫');
+  assert.equal(next['07899'], undefined, '夾在英數字中間的不算');
   assert.equal(next['12345'], undefined, '六位數不拆');
   assert.equal(importRedeemed({}, '').added, 0);
 });

@@ -76,7 +76,7 @@ jobs:
             : > "$RUNNER_TEMP/output"
             GITHUB_OUTPUT="$RUNNER_TEMP/output" node scripts/accept-submission.mjs
             result=$(sed -n 's/^result=//p' "$RUNNER_TEMP/output")
-            if [ "$result" != "added" ]; then
+            if [ "$result" != "added" ] && [ "$result" != "updated" ]; then
               break
             fi
             git add data/codes.json
@@ -93,7 +93,7 @@ jobs:
           echo "result=$result" >> "$GITHUB_OUTPUT"
 
       - name: 重新部署網站
-        if: steps.apply.outputs.result == 'added'
+        if: steps.apply.outputs.result == 'added' || steps.apply.outputs.result == 'updated'
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh workflow run pages.yml --ref main
@@ -107,7 +107,7 @@ jobs:
           gh issue comment "$ISSUE" --body-file comment.md
           gh issue edit "$ISSUE" --remove-label "待審核" || true
           case "$RESULT" in
-            added|duplicate) gh issue close "$ISSUE" --reason completed ;;
+            added|updated|duplicate) gh issue close "$ISSUE" --reason completed ;;
             invalid) gh issue edit "$ISSUE" --remove-label "收錄" --add-label "格式錯誤" ;;
             conflict) gh issue edit "$ISSUE" --remove-label "收錄" --add-label "需確認" ;;
           esac

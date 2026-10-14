@@ -39,9 +39,8 @@ function showError(message) {
 }
 
 function render() {
-  const knownIds = new Set(state.known.keys());
   $('count-all').textContent = String(state.list.length);
-  $('count-new').textContent = String(state.list.filter((s) => !knownIds.has(s.id)).length);
+  $('count-new').textContent = String(state.list.filter((s) => !state.known.has(s.id)).length);
   $('list').replaceChildren(...state.list.map(renderRow));
 }
 
@@ -57,7 +56,7 @@ function renderRow(scan) {
     const spacer = document.createElement('span');
     li.append(id, spacer);
   } else {
-    id.textContent = scan.id;
+    id.textContent = state.known.has(scan.id) ? `${scan.id} · 已收錄 · 待補代號` : scan.id;
     const input = document.createElement('input');
     input.type = 'text';
     input.inputMode = 'numeric';
@@ -105,9 +104,8 @@ function handleText(text) {
   state.list = list;
   save();
   render();
-  const knownCode = state.known.get(id);
-  if (knownCode) {
-    flash('known', `已收錄 ${knownCode}`);
+  if (state.known.has(id)) {
+    flash('known', `已收錄 ${state.known.get(id) || '待補代號'}`);
   } else {
     flash('new', `新 ${id}`);
     navigator.vibrate?.(60);
@@ -159,7 +157,8 @@ function stop() {
 }
 
 async function copyNew() {
-  const text = toExportText(state.list, new Set(state.known.keys()));
+  await loadKnown();
+  const text = toExportText(state.list, state.known);
   const button = $('copy');
   if (!text) {
     button.textContent = '沒有新的';
@@ -186,7 +185,9 @@ async function loadKnown() {
   } catch (error) {
     console.error('quickScan.loadKnown | 讀取已收錄清單失敗', error);
     showError('已收錄清單載入失敗');
+    return;
   }
+  showError(null);
   render();
 }
 
@@ -199,8 +200,10 @@ $('clear').addEventListener('click', () => {
   save();
   render();
 });
+// 回到頁面時重讀已收錄清單，收錄後不必重新整理
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) stop();
+  else loadKnown();
 });
 
 render();
