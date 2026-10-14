@@ -4,7 +4,7 @@
 
 ## 活動結束（2026-10-14）
 
-- `index.html` 的 `<body class="is-ended">` 開關結束頁：CSS 隱藏統計、分頁與清單，`app.js` 只顯示收錄總數與其他作品，不綁定任何舊功能。拿掉這個 class 就恢復原本網站。
+- `assets/config.js` 的 `ended: true`：分頁最前面多一個「活動已結束」並預設開啟（收錄總數＋其他作品，此時隱藏側欄避免重複）；QR Code、掃描、點位照常可用，但拿掉投稿與回報連結。改回 `false` 就恢復活動期間的網站。
 - 投稿與回報的 Issue 範本已移除，「投稿審核與回報」workflow 已在 GitHub 停用（`gh workflow enable` 可恢復）。資料 `data/codes.json` 保留不動。
 
 ## 模組邊界

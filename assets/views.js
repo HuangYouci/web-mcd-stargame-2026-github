@@ -103,8 +103,8 @@ export function PlaceRow({ place, mapsUrl }) {
  *   known: { id: string, reports?: string[] } | null,
  *   redeemedAt: string | null,
  *   onToggleRedeemed: () => void,
- *   submitUrl: string,
- *   reportUrl: string,
+ *   submitUrl: string | null,
+ *   reportUrl: string | null,
  * }} props
  */
 export function ScanResult({ id, known, redeemedAt, onToggleRedeemed, submitUrl, reportUrl }) {
@@ -122,9 +122,11 @@ export function ScanResult({ id, known, redeemedAt, onToggleRedeemed, submitUrl,
             el('input', { type: 'checkbox', checked: Boolean(redeemedAt), onChange: onToggleRedeemed }),
             el('span', { text: '已兌換' }),
           ]),
-          el('a', { class: 'report-link', href: reportUrl, target: '_blank', rel: 'noopener', text: '回報無法使用' }),
+          reportUrl ? el('a', { class: 'report-link', href: reportUrl, target: '_blank', rel: 'noopener', text: '回報無法使用' }) : null,
         ])
-      : el('a', { class: 'btn primary submit-link', href: submitUrl, target: '_blank', rel: 'noopener', text: '前往 GitHub 投稿' }),
+      : submitUrl
+        ? el('a', { class: 'btn primary submit-link', href: submitUrl, target: '_blank', rel: 'noopener', text: '前往 GitHub 投稿' })
+        : null,
   ]);
 }
 

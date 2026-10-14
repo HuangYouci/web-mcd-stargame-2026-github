@@ -271,7 +271,7 @@ button.link {
 }
 
 @media (min-width: 1000px) {
-  .layout:has(.promo:not([hidden])) {
+  body:not([data-active-tab="ended"]) .layout:has(.promo:not([hidden])) {
     grid-template-columns: minmax(0, 1fr) 260px;
   }
 
@@ -633,54 +633,44 @@ tr.empty td {
   }
 }
 
-/* ---- 活動結束頁 ---- */
+/* ---- 活動已結束分頁 ---- */
 
 .ended {
-  display: none;
+  max-width: 720px;
+  padding: 24px 0 0;
+
+  h2 {
+    margin: 0 0 12px;
+    font-size: 28px;
+  }
+
+  p {
+    margin: 0 0 8px;
+    color: var(--text-muted);
+    font-size: 16px;
+  }
+
+  .ended-works {
+    margin-top: 40px;
+  }
+
+  h3 {
+    margin: 0 0 12px;
+    color: var(--text-muted);
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .promo-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 10px;
+  }
 }
 
-.is-ended {
-  .site-header .stats,
-  .tabs,
-  .layout,
-  #backup-open {
-    display: none;
-  }
-
-  .ended {
-    display: block;
-    max-width: 720px;
-    margin: 0 auto;
-    padding: 48px 16px 0;
-
-    h2 {
-      margin: 0 0 12px;
-      font-size: 28px;
-    }
-
-    p {
-      margin: 0 0 8px;
-      color: var(--text-muted);
-      font-size: 16px;
-    }
-
-    .ended-works {
-      margin-top: 40px;
-    }
-
-    h3 {
-      margin: 0 0 12px;
-      color: var(--text-muted);
-      font-size: 13px;
-      font-weight: 600;
-    }
-
-    .promo-list {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-      gap: 10px;
-    }
-  }
+/* 結束分頁已列出其他作品，不再重複顯示側欄 */
+body[data-active-tab="ended"] .promo {
+  display: none !important;
 }
 
 /* ---- 側欄 ---- */

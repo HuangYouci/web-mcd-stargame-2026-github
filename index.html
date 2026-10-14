@@ -10,7 +10,7 @@
   <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
   <link rel="manifest" href="assets/manifest.webmanifest">
-  <link rel="stylesheet" href="assets/style.css?v=20261014-ended">
+  <link rel="stylesheet" href="assets/style.css?v=20261014-ended-tab">
   <link rel="preload" href="data/codes.json" as="fetch" crossorigin>
   <link rel="preload" href="data/summary.json" as="fetch" crossorigin>
   <link rel="modulepreload" href="assets/config.js">
@@ -22,7 +22,7 @@
   <link rel="modulepreload" href="assets/qr.js">
   <script type="module" src="assets/app.js"></script>
 </head>
-<body class="is-ended">
+<body>
   <header class="site-header">
     <div class="header-inner">
       <a class="brand" href="./">
@@ -42,6 +42,7 @@
     </div>
     <nav class="tabs" aria-label="分頁">
       <div class="tabs-inner" role="tablist">
+        <button type="button" role="tab" id="tab-ended" aria-controls="panel-ended" data-tab="ended">活動已結束</button>
         <button type="button" role="tab" id="tab-codes" aria-controls="panel-codes" data-tab="codes">QR Code</button>
         <button type="button" role="tab" id="tab-scan" aria-controls="panel-scan" data-tab="scan">掃描</button>
         <button type="button" role="tab" id="tab-places" aria-controls="panel-places" data-tab="places">點位</button>
@@ -49,19 +50,19 @@
     </nav>
   </header>
 
-  <main class="ended" id="ended">
-    <h2>活動已結束</h2>
-    <p>麥當勞官方已宣布 1+1 星級遊戲結束，謝謝大家參與。</p>
-    <p class="ended-stat" id="ended-stat" hidden></p>
-    <section class="ended-works" id="ended-works" aria-labelledby="ended-works-title" hidden>
-      <h3 id="ended-works-title">其他作品</h3>
-      <div class="promo-list" id="ended-promos"></div>
-    </section>
-  </main>
-
   <div class="layout">
     <main>
-      <section id="panel-codes" role="tabpanel" aria-labelledby="tab-codes">
+      <section id="panel-ended" class="ended" role="tabpanel" aria-labelledby="tab-ended">
+        <h2>活動已結束</h2>
+        <p>麥當勞官方已宣布 1+1 星級遊戲結束，謝謝大家參與。</p>
+        <p class="ended-stat" id="ended-stat" hidden></p>
+        <section class="ended-works" id="ended-works" aria-labelledby="ended-works-title" hidden>
+          <h3 id="ended-works-title">其他作品</h3>
+          <div class="promo-list" id="ended-promos"></div>
+        </section>
+      </section>
+
+      <section id="panel-codes" role="tabpanel" aria-labelledby="tab-codes" hidden>
         <div class="toolbar">
           <input type="search" id="code-query" placeholder="搜尋網址末碼" aria-label="搜尋網址末碼" autocomplete="off">
           <div class="button-group" role="radiogroup" aria-label="兌換狀態">

@@ -10,7 +10,7 @@ import { buildIssueUrl, buildReportUrl, canonicalUrl, parseStarUrl } from './sub
 import { CodeCard, EmptyRow, EmptyState, PlaceRow, PromoCard, QrImage, ScanResult, el } from './views.js';
 
 const PLACE_PAGE_SIZE = 50;
-const TABS = ['codes', 'scan', 'places'];
+const TABS = SITE_CONFIG.ended ? ['ended', 'codes', 'scan', 'places'] : ['codes', 'scan', 'places'];
 const SCAN_INTERVAL_MS = 200;
 
 const storage = (() => {
@@ -104,6 +104,7 @@ function openQrDialog(entry) {
   $('qr-dialog-body').replaceChildren(QrImage({ text: entry.url, label: `${displayLabel(entry)} 的 QR Code` }));
   $('qr-dialog-link').href = entry.url;
   $('qr-dialog-report').href = buildReportUrl(entry.url);
+  $('qr-dialog-report').hidden = SITE_CONFIG.ended;
   $('qr-dialog').showModal();
 }
 
@@ -258,8 +259,8 @@ function renderScanResult() {
         renderCodes();
         renderScanResult();
       },
-      submitUrl: buildIssueUrl(canonicalUrl(id)),
-      reportUrl: buildReportUrl(canonicalUrl(id)),
+      submitUrl: SITE_CONFIG.ended ? null : buildIssueUrl(canonicalUrl(id)),
+      reportUrl: SITE_CONFIG.ended ? null : buildReportUrl(canonicalUrl(id)),
     }),
   );
 }
@@ -363,7 +364,8 @@ async function loadPromos() {
 // ---- 分頁切換 ----
 
 function showTab(name) {
-  const tab = TABS.includes(name) ? name : 'codes';
+  const tab = TABS.includes(name) ? name : TABS[0];
+  document.body.dataset.activeTab = tab;
   for (const t of TABS) {
     $(`tab-${t}`).setAttribute('aria-selected', String(t === tab));
     $(`panel-${t}`).hidden = t !== tab;
@@ -382,15 +384,10 @@ function bindTabs() {
   showTab(location.hash.slice(1));
 }
 
-/** 活動結束頁：只顯示結束訊息、收錄總數與其他作品。由 body 的 is-ended class 開關。 */
-async function showEnded() {
-  try {
-    const codes = await fetchJson('data/codes.json');
-    $('ended-stat').textContent = `這段時間大家一起收錄了 ${codes.length} 個 QR Code。`;
-    $('ended-stat').hidden = false;
-  } catch (error) {
-    console.warn('app.showEnded | 讀取收錄數失敗', error);
-  }
+/** 「活動已結束」分頁：填入收錄總數與其他作品。 */
+async function fillEnded(codes) {
+  $('ended-stat').textContent = `這段時間大家一起收錄了 ${codes.length} 個 QR Code。`;
+  $('ended-stat').hidden = false;
   try {
     const promos = await fetchJson('data/promos.json');
     if (Array.isArray(promos) && promos.length) {
@@ -398,15 +395,11 @@ async function showEnded() {
       $('ended-works').hidden = false;
     }
   } catch (error) {
-    console.warn('app.showEnded | 讀取其他作品失敗', error);
+    console.warn('app.fillEnded | 讀取其他作品失敗', error);
   }
 }
 
 async function main() {
-  if (document.body.classList.contains('is-ended')) {
-    showEnded();
-    return;
-  }
   bindCodeControls();
   bindBackup();
   bindPlaceControls();
@@ -432,6 +425,7 @@ async function main() {
   renderStats();
   renderPlaces();
   renderScanResult();
+  if (SITE_CONFIG.ended) fillEnded(state.codes);
   const idle = window.requestIdleCallback ?? ((fn) => setTimeout(fn, 300));
   idle(loadPromos);
 }
