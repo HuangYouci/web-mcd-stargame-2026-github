@@ -62,7 +62,8 @@ jobs:
         with:
           node-version: 24
 
-      # 同時收錄多則時 push 可能撞到，失敗就以最新 main 重跑一次合併
+      # 同時收錄多則時 push 可能撞到：每次都以最新 main 重跑合併再推，失敗就隨機退避重試。
+      # 不用 concurrency group 排隊，因為它只保留一個 pending，其餘會被取消而漏收。
       - name: 寫入資料
         id: apply
         env:
@@ -70,7 +71,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          for attempt in 1 2 3 4 5; do
+          for attempt in $(seq 1 10); do
             git fetch origin main
             git reset --hard origin/main
             : > "$RUNNER_TEMP/output"
@@ -84,11 +85,11 @@ jobs:
             if git push origin HEAD:main; then
               break
             fi
-            if [ "$attempt" = 5 ]; then
+            if [ "$attempt" = 10 ]; then
               echo "accept-submission | push 連續失敗" >&2
               exit 1
             fi
-            sleep $((attempt * 3))
+            sleep $((attempt * 2 + RANDOM % 5))
           done
           echo "result=$result" >> "$GITHUB_OUTPUT"
 

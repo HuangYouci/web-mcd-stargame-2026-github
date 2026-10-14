@@ -38,4 +38,6 @@
 - **投稿走 GitHub Issue Form**：GitHub Pages 是純靜態，沒有可寫入的後端。Issue 免費、有紀錄；缺點是一般人多半沒有 GitHub 帳號。保留為免費通道，日後可另加其他管道。
 - **兩段式審核，防資料污染**：開 Issue／修改時 Action 只檢查格式並留言（標「待審核」、「格式錯誤」或「需確認」），不寫資料；**只有 repo 擁有者**加上「收錄」標籤才寫入 `data/codes.json` 並重新部署。
 - **部署走 GitHub Actions**：Action 用 `GITHUB_TOKEN` 推的 commit 不會觸發其他 workflow，所以收錄後由 `accept-submission.yml` 的 apply 階段以 `gh workflow run pages.yml` 明確觸發部署。
-- **併發投稿**：push 撞到時以最新 main 重跑合併，最多 5 次；不用 concurrency group，因為它只保留一個 pending，會丟掉投稿。
+- **同時收錄多則（競態）**：
+  - 資料：每個收錄工作都在推送前重抓最新 main、重跑合併；push 被拒就隨機退避重試，最多 10 次。最終每則都是一個獨立 commit，不會互相覆蓋（2026-10-14 一次核准 6 則實測無衝突）。不用 concurrency group 排隊，因為它只保留一個 pending，其餘會被取消而漏收。
+  - 部署：`pages.yml` 的 concurrency 為 `cancel-in-progress`，新的部署會取消舊的。每次觸發部署都在自己的 push 之後，`--ref main` 取的是當下 main 最新 commit，所以最後一次部署必然包含所有已推送的資料；被取消的舊部署只是畫面上的灰色紀錄。
