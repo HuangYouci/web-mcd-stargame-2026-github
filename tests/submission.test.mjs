@@ -62,7 +62,7 @@ test('buildIssueUrl 與 buildReportUrl 帶入網址與範本', () => {
   assert.equal(submit.hostname, 'github.com');
   assert.equal(submit.searchParams.get('template'), 'submit-code.yml');
   assert.equal(submit.searchParams.get('url'), URL_A);
-  assert.equal(submit.searchParams.get('title'), '投稿：3f089');
+  assert.equal(submit.searchParams.get('title'), '投稿：82f3f089');
 
   const report = new URL(buildReportUrl(URL_A));
   assert.equal(report.searchParams.get('template'), 'report-broken.yml');

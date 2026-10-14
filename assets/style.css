@@ -402,6 +402,7 @@ tr.empty td {
   .qr-slot {
     display: block;
     width: 100%;
+    min-width: 0;
     aspect-ratio: 1;
     padding: 6px;
     border: 1px solid var(--border-muted);
@@ -728,6 +729,7 @@ tr.empty td {
 .qr {
   display: block;
   width: 100%;
+  max-width: 100%;
   height: auto;
   fill: #000;
 }
@@ -800,7 +802,7 @@ tr.empty td {
   }
 
   .code-grid {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
   }
 

@@ -85,7 +85,7 @@ function handleText(text) {
   save();
   render();
   if (state.known.has(id)) {
-    flash('known', `已收錄 ${id.slice(-5)}`);
+    flash('known', `已收錄 ${id.slice(-8)}`);
   } else {
     flash('new', `新 ${id}`);
     navigator.vibrate?.(60);

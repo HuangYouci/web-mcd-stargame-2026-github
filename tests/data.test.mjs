@@ -144,7 +144,7 @@ test('匯出 q、匯入 q 與舊版代號', () => {
   assert.equal(importRedeemed({}, '').added, 0);
 });
 
-test('displayLabel 用 q 末五碼', async () => {
+test('displayLabel 用 q 末八碼', async () => {
   const { displayLabel } = await import('../assets/store.js');
-  assert.equal(displayLabel({ id: 'ff2948060d7a', code: '07029' }), '60d7a');
+  assert.equal(displayLabel({ id: 'ff2948060d7a', code: '07029' }), '48060d7a');
 });

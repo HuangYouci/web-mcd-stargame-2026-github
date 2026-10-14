@@ -113,7 +113,7 @@ export function ScanResult({ id, known, redeemedAt, onToggleRedeemed, submitUrl,
   const reports = known?.reports?.length ?? 0;
   return el('div', { class: 'scan-result' }, [
     el('div', { class: 'scan-head' }, [
-      el('strong', { class: 'scan-code', text: id.slice(-5) }),
+      el('strong', { class: 'scan-code', text: displayLabel({ id }) }),
       el('span', { class: 'muted', text: known ? '已收錄' : '未收錄' }),
       reports ? el('span', { class: 'reported', text: `${reports} 人回報無法使用` }) : null,
     ]),

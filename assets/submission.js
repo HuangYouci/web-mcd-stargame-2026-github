@@ -76,10 +76,10 @@ function issueUrl(template, title, url) {
 
 /** 預先填好的投稿 Issue 網址。 */
 export function buildIssueUrl(url) {
-  return issueUrl(SITE_CONFIG.issueTemplate, `投稿：${url.slice(-5)}`, url);
+  return issueUrl(SITE_CONFIG.issueTemplate, `投稿：${url.slice(-8)}`, url);
 }
 
 /** 預先填好的「無法使用」回報 Issue 網址。 */
 export function buildReportUrl(url) {
-  return issueUrl(SITE_CONFIG.reportTemplate, `回報無法使用：${url.slice(-5)}`, url);
+  return issueUrl(SITE_CONFIG.reportTemplate, `回報無法使用：${url.slice(-8)}`, url);
 }

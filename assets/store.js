@@ -7,9 +7,9 @@
 const KEY_IN_TEXT = /(?<![0-9a-f])(?:\d{5}|[0-9a-f]{12})(?![0-9a-f])/g;
 const ID_PATTERN = /^[0-9a-f]{12}$/;
 
-/** 畫面上辨識一筆 QR Code 的短標籤：q 末五碼。 */
+/** 畫面上辨識一筆 QR Code 的短 ID：q 末八碼（刻意不用五碼，避免被當成現場代號）。 */
 export function displayLabel(entry) {
-  return entry.id.slice(-5);
+  return entry.id.slice(-8);
 }
 
 /** 一筆 QR Code 的兌換紀錄 key。 */
